@@ -1,0 +1,9 @@
+# Ignore la config locale
+/config/settings.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Virtualenv
+venv/

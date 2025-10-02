@@ -1,0 +1,13 @@
+{
+  "cluster": {
+    "host": "dxcluster.f5len.org",
+    "port": 7373,
+    "login": "NOCALL"
+  },
+  "callsigns": [],
+  "filters": {
+    "band": "",
+    "mode": ""
+  }
+}
+

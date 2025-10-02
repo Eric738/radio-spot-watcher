@@ -1,0 +1,15 @@
+[Unit]
+Description=Radio Spot Watcher
+After=network.target
+
+[Service]
+User=eric
+WorkingDirectory=/home/eric/radio-spot-watcher
+Environment="PATH=/home/eric/radio-spot-watcher/venv/bin"
+ExecStartPre=/bin/bash -c 'PID=$(lsof -ti:8000) && [ -n "$PID" ] && kill -9 $PID || true'
+ExecStart=/home/eric/radio-spot-watcher/venv/bin/python3 /home/eric/radio-spot-watcher/src/webapp.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
