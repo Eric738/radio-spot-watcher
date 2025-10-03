@@ -27,7 +27,7 @@ DXCC_TABLE = {}
 FALLBACK_DXCC = {"F":"France","EA":"Spain","DL":"Germany","I":"Italy","G":"United Kingdom","M":"United Kingdom",
     "JA":"Japan","VK":"Australia","ZL":"New Zealand","W":"USA","K":"USA","N":"USA","AA":"USA"}
 
-# Regex tolérant pour DX spots
+# Regex tolérant
 DX_LINE = re.compile(
     r"^DX de\s+(?P<spotter>[A-Z0-9\-\/]+):\s+(?P<freq>\d+(\.\d+)?)\s+(?P<dx>[A-Z0-9\/]+)\s*(?P<comment>.*)$",
     re.IGNORECASE
@@ -233,19 +233,43 @@ def index():
     cty_msg = STATUS.get("cty_message","")
 
     html="""<!DOCTYPE html><html><head>
-<meta charset="utf-8"><link rel="stylesheet" href="/static/style.css">
+<meta charset="utf-8">
+<link rel="stylesheet" href="/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
+/* Tableau */
+table { width:100%; border-collapse:collapse; margin-top:10px; font-size:14px; }
+th, td { padding:8px 10px; text-align:left; }
+th { background:#1f2937; color:#93c5fd; }
+tr:nth-child(even) { background:#111827; }
+tr:nth-child(odd)  { background:#0f1115; }
+tr:hover { background:#374151; }
+
+/* Watchlist highlight */
 tr.watch td, tr.watch a { color:#facc15 !important; font-weight:700; }
 tr.watch td:nth-child(3)::before { content:"🔔 "; }
+
+/* Normal rows */
 tr.normal td, tr.normal a { color:#e5e7eb !important; }
-.msg { margin:8px 0; padding:6px; border-radius:6px; }
-.msg.ok { background:#064e3b; color:#bbf7d0; }
-.msg.err{ background:#7f1d1d; color:#fecaca; }
+
+/* Badges état */
+.badge { display:inline-block; padding:3px 8px; border-radius:8px; font-size:12px; margin-right:6px; }
+.badge.ok { background:#065f46; color:#d1fae5; }
+.badge.err{ background:#7f1d1d; color:#fecaca; }
+
+/* Couleurs par bande */
+.band-20m { color:#60a5fa; font-weight:600; }
+.band-40m { color:#34d399; font-weight:600; }
+.band-15m { color:#f472b6; font-weight:600; }
+.band-10m { color:#f59e0b; font-weight:600; }
+.band-2m  { color:#c084fc; font-weight:600; }
+.band-70cm{ color:#a3e635; font-weight:600; }
+.band-QO-100{ color:#f87171; font-weight:600; }
 </style></head><body>
   <h1>📡 Radio Spot Watcher</h1>
 
   {% if cty_msg %}
-    <div class="msg {{ 'ok' if '✅' in cty_msg else 'err' }}">{{ cty_msg }}</div>
+    <div class="badge {{ 'ok' if '✅' in cty_msg else 'err' }}">{{ cty_msg }}</div>
   {% endif %}
 
   <form method="POST">
@@ -273,21 +297,48 @@ tr.normal td, tr.normal a { color:#e5e7eb !important; }
     </select>
   </label>
 
-  <div id="layout"><div id="maincol"><table>
-    <tr><th>Heure</th><th>Fréq</th><th>Indicatif</th><th>DXCC</th><th>Bande</th><th>Mode</th></tr>
-    <tbody id="tb"><tr><td colspan="6">Chargement...</td></tr></tbody>
-  </table></div>
-  <div id="rssbox"><h3>📰 DX News</h3><ul id="rsslist"><li class="muted">Chargement...</li></ul></div></div>
+  <div id="layout">
+    <div id="maincol">
+      <table>
+        <tr><th>Heure</th><th>Fréq</th><th>Indicatif</th><th>DXCC</th><th>Bande</th><th>Mode</th></tr>
+        <tbody id="tb"><tr><td colspan="6">Chargement...</td></tr></tbody>
+      </table>
+    </div>
+
+    <div>
+      <div id="rssbox">
+        <h3>📰 DX News</h3>
+        <ul id="rsslist"><li class="muted">Chargement...</li></ul>
+      </div>
+
+      <div id="bandchartbox">
+        <h3>📊 Band Activity</h3>
+        <canvas id="bandChart"></canvas>
+      </div>
+    </div>
+  </div>
 
 <script>
 const WATCHLIST = {{ watchlist|tojson }};
 let bandFilter="";
+let bandChart;
 
 function applyFilter(){bandFilter=document.getElementById('bandFilter').value;}
+function inWatchlist(call){return WATCHLIST.includes(String(call||"").toUpperCase());}
 
-function inWatchlist(call){
-  const c=String(call||"").toUpperCase();
-  return WATCHLIST.includes(c);
+function updateChart(spots){
+  const counts={};
+  for(const s of spots){ if(s.band) counts[s.band]=(counts[s.band]||0)+1; }
+  const labels=Object.keys(counts);
+  const values=Object.values(counts);
+  if(!bandChart){
+    const ctx=document.getElementById('bandChart').getContext('2d');
+    bandChart=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Spots par bande',data:values,backgroundColor:'#3b82f6'}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+  }else{
+    bandChart.data.labels=labels;
+    bandChart.data.datasets[0].data=values;
+    bandChart.update();
+  }
 }
 
 async function refresh(){
@@ -296,13 +347,18 @@ async function refresh(){
   for(const s of d){
     if(bandFilter && s.band!==bandFilter) continue;
     const css=inWatchlist(s.callsign)?'watch':'normal';
+    const bandClass=s.band?('band-'+s.band):'';
     r+=`<tr class="${css}">
           <td>${s.timestamp||''}</td>
           <td>${s.frequency||''}</td>
           <td><a href="https://www.qrz.com/db/${s.callsign}" target="_blank">${s.callsign||''}</a></td>
-          <td>${s.dxcc||''}</td><td>${s.band||''}</td><td>${s.mode||''}</td></tr>`;
+          <td>${s.dxcc||''}</td>
+          <td class="${bandClass}">${s.band||''}</td>
+          <td>${s.mode||''}</td>
+        </tr>`;
   }
   document.getElementById('tb').innerHTML=r||'<tr><td colspan="6">Aucun spot</td></tr>';
+  updateChart(d);
 }
 
 async function loadRSS(){
