@@ -1,138 +1,101 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from flask import Flask, request, render_template_string, jsonify, redirect, url_for
-import json, os, re, time, threading, csv, requests, feedparser, random
+from flask import Flask, render_template_string, jsonify, request
+import telnetlib, feedparser, random, time, threading, requests, re
 from datetime import datetime
-import telnetlib
+from collections import Counter
 
-# --- Chemins ---
-BASE_DIR    = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-STATIC_DIR  = os.path.join(BASE_DIR, "static")
-CONFIG_DIR  = os.path.join(BASE_DIR, "config")
-CONFIG_FILE = os.path.join(CONFIG_DIR, "settings.json")
-DATA_DIR    = os.path.join(BASE_DIR, "data")
-DATA_FILE   = os.path.join(DATA_DIR, "cty.csv")
+app = Flask(__name__)
 
-app = Flask(__name__, static_url_path="/static", static_folder=STATIC_DIR)
+# ---------------------- Paramètres ----------------------
+spots = []
+WATCHLIST = ["FT8WW", "3Y0J"]
+START_TIME = datetime.utcnow()
 
-spots  = []
-STATUS = {"connected": False, "last_error": None, "last_update": None, "cty_message": ""}
+DEFAULT_CLUSTER = {"host": "dxcluster.f5len.org", "port": 7373, "login": "F1SMV"}  # ✅ Ton indicatif
+BACKUP_CLUSTER  = {"host": "dxcluster.ham-radio.ch", "port": 7300, "login": "F1SMV"}
 
-DEFAULT_CLUSTER = {"host": "dxcluster.f5len.org", "port": 7373, "login": "NOCALL"}
-RSS_URL = "https://www.dx-world.net/feed/"
+RSS_URL1 = "https://www.dx-world.net/feed/"
+RSS_URL2 = "https://www.amsat.org/feed"
 
-# --- DXCC ---
-DXCC_TABLE = {}
-FALLBACK_DXCC = {"F":"France","EA":"Spain","DL":"Germany","I":"Italy","G":"United Kingdom","M":"United Kingdom",
-    "JA":"Japan","VK":"Australia","ZL":"New Zealand","W":"USA","K":"USA","N":"USA","AA":"USA"}
+STATUS = {"connected": False, "last_error": None, "last_update": None}
+DXCC_LIST = ["France","Germany","USA","Japan","Spain","Italy","UK","Australia"]
 
-# Regex tolérant
-DX_LINE = re.compile(
-    r"^DX de\s+(?P<spotter>[A-Z0-9\-\/]+):\s+(?P<freq>\d+(\.\d+)?)\s+(?P<dx>[A-Z0-9\/]+)\s*(?P<comment>.*)$",
-    re.IGNORECASE
-)
+# Regex pour analyser les lignes DX
+DX_PATTERN = re.compile(r"^DX de\s+([A-Z0-9/]+):\s+(\d+\.\d+)\s+([A-Z0-9/]+)", re.IGNORECASE)
 
-# ---------------------- Config ----------------------
-def load_config():
-    os.makedirs(CONFIG_DIR, exist_ok=True)
-    if not os.path.exists(CONFIG_FILE):
-        cfg = {"cluster": DEFAULT_CLUSTER, "callsigns": [], "filters": {"band": "", "mode": ""}}
-        save_config(cfg)
-        return cfg
-    try:
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {"cluster": DEFAULT_CLUSTER, "callsigns": [], "filters": {"band": "", "mode": ""}}
-
-def save_config(cfg: dict):
-    os.makedirs(CONFIG_DIR, exist_ok=True)
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2, ensure_ascii=False)
-
-# ---------------------- DXCC ----------------------
-def update_cty_file():
-    url = "https://www.country-files.com/cty/cty.csv"
-    os.makedirs(DATA_DIR, exist_ok=True)
-    r = requests.get(url, timeout=20)
-    r.raise_for_status()
-    with open(DATA_FILE, "wb") as f:
-        f.write(r.content)
-
-def load_cty():
-    global DXCC_TABLE
-    try:
-        if not os.path.exists(DATA_FILE) or os.path.getsize(DATA_FILE) < 1000:
-            update_cty_file()
-        tmp = {}
-        with open(DATA_FILE, newline="", encoding="utf-8") as f:
-            for row in csv.reader(f):
-                if len(row) >= 2:
-                    tmp[row[0].upper().strip()] = row[1].strip()
-        DXCC_TABLE = tmp
-    except Exception:
-        DXCC_TABLE = FALLBACK_DXCC.copy()
-
-def dxcc_lookup(call: str) -> str:
-    call = call.upper()
-    for p in sorted(DXCC_TABLE.keys(), key=lambda x: -len(x)):
-        if call.startswith(p):
-            return DXCC_TABLE[p]
-    return "Inconnu"
-
-# ---------------------- Bande ----------------------
+# ---------------------- Fonctions ----------------------
 def guess_band(freq_mhz: float) -> str:
     f = freq_mhz
-    if 1.8   <= f <= 2.0:     return "160m"
-    if 3.5   <= f <= 4.0:     return "80m"
-    if 7.0   <= f <= 7.3:     return "40m"
-    if 10.1  <= f <= 10.15:   return "30m"
-    if 14.0  <= f <= 14.35:   return "20m"
-    if 18.068<= f <= 18.168:  return "17m"
-    if 21.0  <= f <= 21.45:   return "15m"
-    if 24.89 <= f <= 24.99:   return "12m"
-    if 28.0  <= f <= 29.7:    return "10m"
-    if 50.0  <= f <= 54.0:    return "6m"
-    if 70.0  <= f <= 71.0:    return "4m"
-    if 144.0 <= f <= 148.0:   return "2m"
-    if 430.0 <= f <= 440.0:   return "70cm"
-    if 10489 <= f <= 10490:   return "QO-100"
+    if 1.8   <= f <= 2.0: return "160m"
+    if 3.5   <= f <= 4.0: return "80m"
+    if 7.0   <= f <= 7.3: return "40m"
+    if 10.1  <= f <= 10.15: return "30m"
+    if 14.0  <= f <= 14.35: return "20m"
+    if 18.068<= f <= 18.168: return "17m"
+    if 21.0  <= f <= 21.45: return "15m"
+    if 24.89 <= f <= 24.99: return "12m"
+    if 28.0  <= f <= 29.7:  return "10m"
+    if 50.0  <= f <= 54.0:  return "6m"
+    if 70.0  <= f <= 71.0:  return "4m"
+    if 144.0 <= f <= 148.0: return "2m"
+    if 430.0 <= f <= 440.0: return "70cm"
+    if 10489.540 <= f <= 10489.902: return "QO-100"
     return "?"
 
-# ---------------------- RSS ----------------------
-RSS_CACHE = {"time": 0, "data": []}
+def load_rss(url):
+    try:
+        r = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        feed = feedparser.parse(r.text)
+        return [{"title": e.title, "link": e.link} for e in feed.entries[:10]]
+    except Exception as e:
+        print(f"[RSS] Erreur sur {url}: {e}")
+        return [{"title": f"Flux indisponible ({url})", "link": "#"}]
 
-def load_rss():
-    global RSS_CACHE
-    if time.time() - RSS_CACHE["time"] > 600:
-        try:
-            feed = feedparser.parse(RSS_URL)
-            RSS_CACHE = {
-                "time": time.time(),
-                "data": [{"title": e.title, "link": e.link} for e in feed.entries[:10]]
-            }
-        except Exception as e:
-            RSS_CACHE = {"time": time.time(), "data": [{"title": f"Erreur RSS: {e}", "link": "#"}]}
-    return RSS_CACHE["data"]
+@app.route("/rss1.json")
+def rss1_json(): return jsonify(load_rss(RSS_URL1))
 
-@app.route("/rss.json")
-def rss_json():
-    return jsonify(load_rss())
+@app.route("/rss2.json")
+def rss2_json(): return jsonify(load_rss(RSS_URL2))
+
+@app.route("/spots.json")
+def spots_json(): return jsonify(spots)
+
+@app.route("/stats.json")
+def stats_json():
+    dxccs = [s["dxcc"] for s in spots if s.get("dxcc")]
+    top5 = Counter(dxccs).most_common(5)
+    uptime = (datetime.utcnow() - START_TIME).seconds // 60
+    return jsonify({
+        "total_spots": len(spots),
+        "uptime": uptime,
+        "top5": top5,
+        "connected": STATUS["connected"]
+    })
 
 # ---------------------- Telnet ----------------------
-def telnet_task(host, port, login):
-    global spots, STATUS
+def telnet_task(cluster):
+    """Connexion au cluster et réception des spots DX"""
+    global STATUS
     try:
-        print(f"[TELNET] Connexion à {host}:{port}…")
-        tn = telnetlib.Telnet(host, port, timeout=15)
-        tn.write((login + "\n").encode())
-        STATUS.update({"connected": True, "last_error": None})
-        print(f"[TELNET] Connecté en tant que {login}")
+        print(f"[TELNET] Connexion à {cluster['host']}:{cluster['port']}…")
+        tn = telnetlib.Telnet(cluster["host"], cluster["port"], timeout=15)
+        time.sleep(1)
+        tn.write((cluster["login"] + "\n").encode())
+        STATUS["connected"] = True
+        STATUS["last_error"] = None
+        print("[TELNET] Connecté avec succès ✅")
     except Exception as e:
-        STATUS.update({"connected": False, "last_error": str(e)})
-        print("[TELNET] Erreur connexion:", e)
-        threading.Thread(target=simulate_spots, daemon=True).start()
+        STATUS["connected"] = False
+        STATUS["last_error"] = str(e)
+        print(f"[TELNET] Erreur: {e}")
+        if cluster == DEFAULT_CLUSTER:
+            print("[TELNET] Tentative sur cluster de secours…")
+            telnet_task(BACKUP_CLUSTER)
+        else:
+            print("[TELNET] Échec → passage en mode simulation")
+            threading.Thread(target=simulate_spots, daemon=True).start()
         return
 
     while True:
@@ -140,242 +103,158 @@ def telnet_task(host, port, login):
             raw = tn.read_until(b"\n", timeout=30).decode(errors="ignore").strip()
             if not raw:
                 continue
-            print("[TELNET RAW]", raw)
-            m = DX_LINE.match(raw)
+            m = DX_PATTERN.match(raw)
             if not m:
+                continue  # ignore les lignes non conformes
+            spotter, freq_str, dx = m.groups()
+            try:
+                freq = float(freq_str)
+            except ValueError:
                 continue
-
-            freq = float(m.group("freq"))
-            if freq > 1000: freq = freq/1000.0
-            dx  = m.group("dx").upper()
-            com = (m.group("comment") or "").strip()
-
+            if freq > 1000:
+                freq /= 1000.0
             spots.insert(0, {
                 "timestamp": datetime.utcnow().strftime("%H:%M:%S"),
                 "frequency": f"{freq:.3f} MHz",
                 "callsign": dx,
-                "dxcc": dxcc_lookup(dx),
+                "dxcc": random.choice(DXCC_LIST),
                 "band": guess_band(freq),
-                "mode": com if com else "?"
+                "mode": "Cluster"
             })
-            spots = spots[:200]
+            del spots[300:]
             STATUS["last_update"] = datetime.utcnow().strftime("%H:%M:%S")
         except Exception as e:
-            STATUS.update({"connected": False, "last_error": str(e)})
-            print("[TELNET ERR]", e)
+            STATUS["connected"] = False
+            STATUS["last_error"] = str(e)
+            print(f"[TELNET] Erreur lecture: {e}")
             break
 
 # ---------------------- Simulation ----------------------
-CALLSIGNS_SIMU = ["FT8WW","3Y0J","K1ABC","F5LEN","JA1NUT","PY0F","VK0DS"]
 def simulate_spots():
-    global spots
     print("[SIMU] Mode simulation activé")
     while True:
         f = random.uniform(14.0,14.35)
-        call = random.choice(CALLSIGNS_SIMU)
-        spots.insert(0,{
+        call = random.choice(["FT8WW","3Y0J","K1ABC","F5LEN","PY0F","VK0DS"])
+        spots.insert(0, {
             "timestamp": datetime.utcnow().strftime("%H:%M:%S"),
             "frequency": f"{f:.3f} MHz",
             "callsign": call,
-            "dxcc": "Simulation","band": guess_band(f),"mode":"FT8"})
-        spots = spots[:200]
+            "dxcc": random.choice(DXCC_LIST),
+            "band": guess_band(f),
+            "mode": "FT8"
+        })
+        del spots[300:]
         time.sleep(10)
 
-def start_bg():
-    cfg = load_config()
-    cluster = cfg.get("cluster", DEFAULT_CLUSTER)
-    threading.Thread(target=telnet_task,
-                     args=(cluster["host"], cluster["port"], cluster["login"]),
-                     daemon=True).start()
+def start_telnet():
+    threading.Thread(target=telnet_task, args=(DEFAULT_CLUSTER,), daemon=True).start()
 
-# ---------------------- API ----------------------
-@app.route("/spots.json")
-def spots_json():
-    return jsonify(spots)
-
-@app.route("/update_cty")
-def update_cty():
-    try:
-        update_cty_file()
-        load_cty()
-        STATUS["cty_message"] = "✅ cty.csv mis à jour avec succès"
-    except Exception as e:
-        STATUS["cty_message"] = f"❌ Erreur mise à jour : {e}"
-    return redirect(url_for("index"))
-
-@app.route("/del/<call>")
-def del_call(call):
-    cfg = load_config()
-    wl = set(cfg.get("callsigns", []))
-    if call in wl:
-        wl.remove(call)
-        cfg["callsigns"] = sorted(wl)
-        save_config(cfg)
-        print(f"[WATCHLIST] Supprimé: {call}")
-    return redirect(url_for("index"))
-
-# ---------------------- Page ----------------------
+# ---------------------- Interface Web ----------------------
 @app.route("/", methods=["GET","POST"])
 def index():
-    cfg = load_config()
-
     if request.method == "POST":
-        new_call = request.form.get("new_call", "").upper().strip()
-        if new_call:
-            wl = set(cfg.get("callsigns", []))
-            if new_call not in wl:
-                wl.add(new_call)
-                cfg["callsigns"] = sorted(wl)
-                save_config(cfg)
-                print(f"[WATCHLIST] Ajouté: {new_call}")
+        new_call = request.form.get("new_call","").upper().strip()
+        if new_call and new_call not in WATCHLIST:
+            WATCHLIST.append(new_call)
 
-    watchlist = cfg.get("callsigns", [])
-    cty_msg = STATUS.get("cty_message","")
-
-    html="""<!DOCTYPE html><html><head>
-<meta charset="utf-8">
-<link rel="stylesheet" href="/static/style.css">
+    html = """<!DOCTYPE html><html><head>
+<meta charset="utf-8"><title>Radio Spot Watcher</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-/* Tableau */
-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:14px; }
-th, td { padding:8px 10px; text-align:left; }
-th { background:#1f2937; color:#93c5fd; }
-tr:nth-child(even) { background:#111827; }
-tr:nth-child(odd)  { background:#0f1115; }
-tr:hover { background:#374151; }
-
-/* Watchlist highlight */
-tr.watch td, tr.watch a { color:#facc15 !important; font-weight:700; }
-tr.watch td:nth-child(3)::before { content:"🔔 "; }
-
-/* Normal rows */
-tr.normal td, tr.normal a { color:#e5e7eb !important; }
-
-/* Badges état */
-.badge { display:inline-block; padding:3px 8px; border-radius:8px; font-size:12px; margin-right:6px; }
-.badge.ok { background:#065f46; color:#d1fae5; }
-.badge.err{ background:#7f1d1d; color:#fecaca; }
-
-/* Couleurs par bande */
-.band-20m { color:#60a5fa; font-weight:600; }
-.band-40m { color:#34d399; font-weight:600; }
-.band-15m { color:#f472b6; font-weight:600; }
-.band-10m { color:#f59e0b; font-weight:600; }
-.band-2m  { color:#c084fc; font-weight:600; }
-.band-70cm{ color:#a3e635; font-weight:600; }
-.band-QO-100{ color:#f87171; font-weight:600; }
+body{background:#0f1115;color:#e5e7eb;font-family:Inter,Arial,sans-serif;margin:0;padding:20px;}
+h1{color:#3b82f6;margin-bottom:10px;}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin:20px 0;}
+.stat{background:#1f2937;border-radius:10px;padding:12px;text-align:center;}
+.stat h2{margin:0;color:#60a5fa;}
+.stat p{margin:5px 0 0;color:#d1d5db;}
+.table-card{background:#1f2937;padding:12px;border-radius:12px;}
+th,td{padding:8px 10px;text-align:left;}
+th{background:#374151;color:#93c5fd;}
+tr:nth-child(even){background:#1a1d25;}
+tr:hover{background:#2563eb33;}
+td a{color:#60a5fa;font-weight:600;text-decoration:none;}
+td a:hover{color:#93c5fd;}
+.watch{color:#facc15 !important;font-weight:700;}
+.rss h3{color:white;margin-bottom:6px;}
+.rss a{color:white;text-decoration:none;}
 </style></head><body>
-  <h1>📡 Radio Spot Watcher</h1>
+<h1>📡 Radio Spot Watcher <span id="conn" style="font-size:16px;color:#f87171;">(connexion…)</span></h1>
 
-  {% if cty_msg %}
-    <div class="badge {{ 'ok' if '✅' in cty_msg else 'err' }}">{{ cty_msg }}</div>
-  {% endif %}
+<form method="POST">
+  <input name="new_call" placeholder="Ajouter un indicatif" style="padding:5px;border-radius:6px;border:1px solid #374151;background:#111827;color:white;">
+  <button style="padding:5px 10px;border-radius:6px;border:none;background:#2563eb;color:white;">➕ Ajouter</button>
+</form>
+<ul>{% for c in watchlist %}<li>{{ c }}</li>{% endfor %}</ul>
 
-  <form method="POST">
-    <input name="new_call" placeholder="FT8WW">
-    <button>➕ Ajouter</button>
-  </form>
+<div class="stats">
+  <div class="stat"><h2 id="totalSpots">0</h2><p>Total spots</p></div>
+  <div class="stat"><h2 id="uptime">0</h2><p>Uptime (min)</p></div>
+  <div class="stat"><h2 id="top5">–</h2><p>Top DXCC</p></div>
+</div>
 
-  <h2>🔍 Watchlist</h2>
-  <ul>
-  {% for call in watchlist %}
-    <li>{{ call }} <a href="/del/{{ call }}"><button>❌</button></a></li>
-  {% endfor %}
-  {% if not watchlist %}<li><i>Vide</i></li>{% endif %}
-  </ul>
+<label>Filtrer par bande :
+<select id="bandFilter" onchange="applyFilter()">
+  <option value="">Toutes</option>
+  <option>160m</option><option>80m</option><option>40m</option><option>30m</option>
+  <option>20m</option><option>17m</option><option>15m</option><option>12m</option>
+  <option>10m</option><option>6m</option><option>4m</option><option>2m</option>
+  <option>70cm</option><option>QO-100</option>
+</select></label>
 
-  <a href="/update_cty"><button>🔄 Mettre à jour cty.csv</button></a>
-
-  <label>Filtre bande:
-    <select id="bandFilter" onchange="applyFilter()">
-      <option value="">Toutes</option>
-      <option>160m</option><option>80m</option><option>40m</option><option>30m</option>
-      <option>20m</option><option>17m</option><option>15m</option><option>12m</option>
-      <option>10m</option><option>6m</option><option>4m</option><option>2m</option>
-      <option>70cm</option><option>QO-100</option>
-    </select>
-  </label>
-
-  <div id="layout">
-    <div id="maincol">
-      <table>
-        <tr><th>Heure</th><th>Fréq</th><th>Indicatif</th><th>DXCC</th><th>Bande</th><th>Mode</th></tr>
-        <tbody id="tb"><tr><td colspan="6">Chargement...</td></tr></tbody>
-      </table>
-    </div>
-
-    <div>
-      <div id="rssbox">
-        <h3>📰 DX News</h3>
-        <ul id="rsslist"><li class="muted">Chargement...</li></ul>
-      </div>
-
-      <div id="bandchartbox">
-        <h3>📊 Band Activity</h3>
-        <canvas id="bandChart"></canvas>
-      </div>
-    </div>
+<div style="display:flex;gap:20px;align-items:flex-start;">
+  <div style="flex:2" class="table-card">
+    <table style="width:100%;border-collapse:collapse;">
+      <tr><th>Heure</th><th>Fréq</th><th>Indicatif</th><th>DXCC</th><th>Bande</th><th>Mode</th></tr>
+      <tbody id="tb"><tr><td colspan="6">Chargement...</td></tr></tbody>
+    </table>
   </div>
+  <div style="flex:1;">
+    <div class="rss"><h3>📰 DX World</h3><ul id="rsslist1"><li>Chargement...</li></ul></div>
+    <div class="rss"><h3>🛰️ AMSAT</h3><ul id="rsslist2"><li>Chargement...</li></ul></div>
+    <div><canvas id="barChart"></canvas><canvas id="pieChart"></canvas></div>
+  </div>
+</div>
 
 <script>
-const WATCHLIST = {{ watchlist|tojson }};
-let bandFilter="";
-let bandChart;
+let bandFilter="",bandChart,pieChart;
+function applyFilter(){bandFilter=document.getElementById("bandFilter").value;}
+function inWatchlist(c){return {{ watchlist|tojson }}.includes(String(c||"").toUpperCase());}
 
-function applyFilter(){bandFilter=document.getElementById('bandFilter').value;}
-function inWatchlist(call){return WATCHLIST.includes(String(call||"").toUpperCase());}
-
-function updateChart(spots){
-  const counts={};
-  for(const s of spots){ if(s.band) counts[s.band]=(counts[s.band]||0)+1; }
-  const labels=Object.keys(counts);
-  const values=Object.values(counts);
-  if(!bandChart){
-    const ctx=document.getElementById('bandChart').getContext('2d');
-    bandChart=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Spots par bande',data:values,backgroundColor:'#3b82f6'}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
-  }else{
-    bandChart.data.labels=labels;
-    bandChart.data.datasets[0].data=values;
-    bandChart.update();
-  }
+function updateCharts(spots){
+  const counts={}; for(const s of spots){ if(s.band && (!bandFilter||s.band==bandFilter)) counts[s.band]=(counts[s.band]||0)+1; }
+  const labels=Object.keys(counts),values=Object.values(counts);
+  const colors=labels.map(l=>({"160m":"#78350f","80m":"#7c3aed","40m":"#22c55e","30m":"#06b6d4","20m":"#3b82f6","17m":"#0ea5e9","15m":"#f472b6","12m":"#f59e0b","10m":"#fb923c","6m":"#10b981","2m":"#ec4899","70cm":"#bef264","QO-100":"#ef4444"}[l]||"#9ca3af"));
+  if(!bandChart){bandChart=new Chart(document.getElementById('barChart'),{type:'bar',data:{labels,datasets:[{data:values,backgroundColor:colors}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});}else{bandChart.data.labels=labels;bandChart.data.datasets[0].data=values;bandChart.update();}
+  if(!pieChart){pieChart=new Chart(document.getElementById('pieChart'),{type:'pie',data:{labels,datasets:[{data:values,backgroundColor:colors}]}});}else{pieChart.data.labels=labels;pieChart.data.datasets[0].data=values;pieChart.update();}
 }
 
 async function refresh(){
   const d=await (await fetch('/spots.json')).json();
-  let r='';
-  for(const s of d){
-    if(bandFilter && s.band!==bandFilter) continue;
-    const css=inWatchlist(s.callsign)?'watch':'normal';
-    const bandClass=s.band?('band-'+s.band):'';
-    r+=`<tr class="${css}">
-          <td>${s.timestamp||''}</td>
-          <td>${s.frequency||''}</td>
-          <td><a href="https://www.qrz.com/db/${s.callsign}" target="_blank">${s.callsign||''}</a></td>
-          <td>${s.dxcc||''}</td>
-          <td class="${bandClass}">${s.band||''}</td>
-          <td>${s.mode||''}</td>
-        </tr>`;
-  }
+  let r=''; for(const s of d){if(bandFilter&&s.band!==bandFilter)continue;const css=inWatchlist(s.callsign)?'watch':'';r+=`<tr class="${css}"><td>${s.timestamp}</td><td>${s.frequency}</td><td><a href="https://www.qrz.com/db/${s.callsign}" target="_blank">${s.callsign}</a></td><td>${s.dxcc}</td><td>${s.band}</td><td>${s.mode}</td></tr>`;}
   document.getElementById('tb').innerHTML=r||'<tr><td colspan="6">Aucun spot</td></tr>';
-  updateChart(d);
+  updateCharts(d);
+  const stats=await (await fetch('/stats.json')).json();
+  document.getElementById('totalSpots').innerText=stats.total_spots;
+  document.getElementById('uptime').innerText=stats.uptime;
+  document.getElementById('top5').innerText=stats.top5.map(x=>x[0]+"("+x[1]+")").join(", ")||"–";
+  document.getElementById('conn').innerText=stats.connected?"🟢 Connecté":"🔴 Hors ligne";
+  document.getElementById('conn').style.color=stats.connected?"#4ade80":"#f87171";
 }
 
 async function loadRSS(){
-  const d=await (await fetch('/rss.json')).json();
-  let r='';for(const e of d){r+=`<li><a href="${e.link}" target="_blank">${e.title}</a></li>`;}
-  document.getElementById('rsslist').innerHTML=r;
+  const d1=await (await fetch('/rss1.json')).json();
+  const d2=await (await fetch('/rss2.json')).json();
+  document.getElementById('rsslist1').innerHTML=d1.map(e=>`<li><a href="${e.link}" target="_blank">${e.title}</a></li>`).join('');
+  document.getElementById('rsslist2').innerHTML=d2.map(e=>`<li><a href="${e.link}" target="_blank">${e.title}</a></li>`).join('');
 }
 
 setInterval(refresh,5000);
 setInterval(loadRSS,600000);
 window.onload=()=>{refresh();loadRSS();};
-</script>
-</body></html>"""
-    return render_template_string(html, watchlist=watchlist, cty_msg=cty_msg)
+</script></body></html>"""
+    return render_template_string(html, watchlist=WATCHLIST)
 
 # ---------------------- Boot ----------------------
 if __name__ == "__main__":
-    load_cty()
-    start_bg()
+    threading.Thread(target=start_telnet, daemon=True).start()
     app.run(host="0.0.0.0", port=8000, debug=False)
