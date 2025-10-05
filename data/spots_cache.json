@@ -1,0 +1,802 @@
+[
+  {
+    "timestamp": "06:50:26",
+    "frequency": "28.187 MHz",
+    "callsign": "VK0DS",
+    "dxcc": "Australia",
+    "band": "10m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:50:24",
+    "frequency": "28.070 MHz",
+    "callsign": "FT8WW",
+    "dxcc": "France",
+    "band": "10m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:50:18",
+    "frequency": "21.014 MHz",
+    "callsign": "A45XR",
+    "dxcc": "Oman",
+    "band": "15m",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:50:16",
+    "frequency": "7.066 MHz",
+    "callsign": "PY0F",
+    "dxcc": "Fernando de Noronha",
+    "band": "40m",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:50:10",
+    "frequency": "21.036 MHz",
+    "callsign": "VK0DS",
+    "dxcc": "Australia",
+    "band": "15m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:50:08",
+    "frequency": "10489.591 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "QO-100",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:50:02",
+    "frequency": "28.014 MHz",
+    "callsign": "VK0DS",
+    "dxcc": "Australia",
+    "band": "10m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:50:00",
+    "frequency": "10489.675 MHz",
+    "callsign": "VK0DS",
+    "dxcc": "Australia",
+    "band": "QO-100",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:49:54",
+    "frequency": "28.185 MHz",
+    "callsign": "FT8WW",
+    "dxcc": "France",
+    "band": "10m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:49:52",
+    "frequency": "10489.849 MHz",
+    "callsign": "HK0NA",
+    "dxcc": "Colombia",
+    "band": "QO-100",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:49:46",
+    "frequency": "7.045 MHz",
+    "callsign": "9N7AA",
+    "dxcc": "Nepal",
+    "band": "40m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:49:44",
+    "frequency": "14.074 MHz",
+    "callsign": "VK0DS",
+    "dxcc": "Australia",
+    "band": "20m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:49:38",
+    "frequency": "10489.737 MHz",
+    "callsign": "F4ABC",
+    "dxcc": "France",
+    "band": "QO-100",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:49:36",
+    "frequency": "21.032 MHz",
+    "callsign": "F4ABC",
+    "dxcc": "France",
+    "band": "15m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:49:30",
+    "frequency": "14.119 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "20m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:49:28",
+    "frequency": "14.190 MHz",
+    "callsign": "A45XR",
+    "dxcc": "Oman",
+    "band": "20m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:49:22",
+    "frequency": "28.153 MHz",
+    "callsign": "F4ABC",
+    "dxcc": "France",
+    "band": "10m",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:49:20",
+    "frequency": "7.056 MHz",
+    "callsign": "EA8/ON4ZZZ",
+    "dxcc": "Belgium",
+    "band": "40m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:49:14",
+    "frequency": "7.070 MHz",
+    "callsign": "EA8/ON4ZZZ",
+    "dxcc": "Belgium",
+    "band": "40m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:49:12",
+    "frequency": "28.147 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "10m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:49:06",
+    "frequency": "28.037 MHz",
+    "callsign": "F4ABC",
+    "dxcc": "France",
+    "band": "10m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:49:04",
+    "frequency": "7.036 MHz",
+    "callsign": "FT8WW",
+    "dxcc": "France",
+    "band": "40m",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:48:58",
+    "frequency": "10489.688 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "QO-100",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:48:56",
+    "frequency": "14.053 MHz",
+    "callsign": "HK0NA",
+    "dxcc": "Colombia",
+    "band": "20m",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:48:50",
+    "frequency": "7.078 MHz",
+    "callsign": "HK0NA",
+    "dxcc": "Colombia",
+    "band": "40m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:48:48",
+    "frequency": "21.071 MHz",
+    "callsign": "A45XR",
+    "dxcc": "Oman",
+    "band": "15m",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:48:42",
+    "frequency": "10489.831 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "QO-100",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:48:40",
+    "frequency": "10489.593 MHz",
+    "callsign": "FT8WW",
+    "dxcc": "France",
+    "band": "QO-100",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:48:34",
+    "frequency": "10489.639 MHz",
+    "callsign": "9N7AA",
+    "dxcc": "Nepal",
+    "band": "QO-100",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:48:32",
+    "frequency": "21.025 MHz",
+    "callsign": "9N7AA",
+    "dxcc": "Nepal",
+    "band": "15m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:48:26",
+    "frequency": "28.177 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "10m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:48:24",
+    "frequency": "14.001 MHz",
+    "callsign": "PY0F",
+    "dxcc": "Fernando de Noronha",
+    "band": "20m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:48:18",
+    "frequency": "7.033 MHz",
+    "callsign": "A45XR",
+    "dxcc": "Oman",
+    "band": "40m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:48:16",
+    "frequency": "14.345 MHz",
+    "callsign": "FT8WW",
+    "dxcc": "France",
+    "band": "20m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:48:10",
+    "frequency": "21.079 MHz",
+    "callsign": "A45XR",
+    "dxcc": "Oman",
+    "band": "15m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:48:08",
+    "frequency": "21.021 MHz",
+    "callsign": "F4ABC",
+    "dxcc": "France",
+    "band": "15m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:48:02",
+    "frequency": "14.288 MHz",
+    "callsign": "A45XR",
+    "dxcc": "Oman",
+    "band": "20m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:48:00",
+    "frequency": "24.902 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "12m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:47:54",
+    "frequency": "24.916 MHz",
+    "callsign": "3Y0J",
+    "dxcc": "?",
+    "band": "12m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:47:52",
+    "frequency": "28.132 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "10m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:47:46",
+    "frequency": "24.956 MHz",
+    "callsign": "HK0NA",
+    "dxcc": "Colombia",
+    "band": "12m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:47:44",
+    "frequency": "21.087 MHz",
+    "callsign": "VK0DS",
+    "dxcc": "Australia",
+    "band": "15m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:47:38",
+    "frequency": "21.067 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "15m",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:47:36",
+    "frequency": "21.018 MHz",
+    "callsign": "VK0DS",
+    "dxcc": "Australia",
+    "band": "15m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:47:30",
+    "frequency": "28.040 MHz",
+    "callsign": "9N7AA",
+    "dxcc": "Nepal",
+    "band": "10m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:47:28",
+    "frequency": "21.031 MHz",
+    "callsign": "3Y0J",
+    "dxcc": "?",
+    "band": "15m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:47:22",
+    "frequency": "28.124 MHz",
+    "callsign": "FT8WW",
+    "dxcc": "France",
+    "band": "10m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:47:20",
+    "frequency": "24.910 MHz",
+    "callsign": "F4ABC",
+    "dxcc": "France",
+    "band": "12m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:47:14",
+    "frequency": "14.044 MHz",
+    "callsign": "PY0F",
+    "dxcc": "Fernando de Noronha",
+    "band": "20m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:47:12",
+    "frequency": "28.144 MHz",
+    "callsign": "A45XR",
+    "dxcc": "Oman",
+    "band": "10m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:47:06",
+    "frequency": "10489.675 MHz",
+    "callsign": "EA8/ON4ZZZ",
+    "dxcc": "Belgium",
+    "band": "QO-100",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:47:04",
+    "frequency": "21.034 MHz",
+    "callsign": "FT8WW",
+    "dxcc": "France",
+    "band": "15m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:46:58",
+    "frequency": "24.934 MHz",
+    "callsign": "EA8/ON4ZZZ",
+    "dxcc": "Belgium",
+    "band": "12m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:46:56",
+    "frequency": "10489.712 MHz",
+    "callsign": "VK0DS",
+    "dxcc": "Australia",
+    "band": "QO-100",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:46:50",
+    "frequency": "24.982 MHz",
+    "callsign": "PY0F",
+    "dxcc": "Fernando de Noronha",
+    "band": "12m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:46:48",
+    "frequency": "21.012 MHz",
+    "callsign": "EA8/ON4ZZZ",
+    "dxcc": "Belgium",
+    "band": "15m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:46:42",
+    "frequency": "28.152 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "10m",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:46:40",
+    "frequency": "24.950 MHz",
+    "callsign": "A45XR",
+    "dxcc": "Oman",
+    "band": "12m",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:46:34",
+    "frequency": "7.078 MHz",
+    "callsign": "A45XR",
+    "dxcc": "Oman",
+    "band": "40m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:46:32",
+    "frequency": "7.048 MHz",
+    "callsign": "9N7AA",
+    "dxcc": "Nepal",
+    "band": "40m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:46:26",
+    "frequency": "24.894 MHz",
+    "callsign": "EA8/ON4ZZZ",
+    "dxcc": "Belgium",
+    "band": "12m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:46:24",
+    "frequency": "28.039 MHz",
+    "callsign": "PY0F",
+    "dxcc": "Fernando de Noronha",
+    "band": "10m",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:46:18",
+    "frequency": "14.038 MHz",
+    "callsign": "VK0DS",
+    "dxcc": "Australia",
+    "band": "20m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:46:16",
+    "frequency": "28.030 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "10m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:46:10",
+    "frequency": "28.091 MHz",
+    "callsign": "FT8WW",
+    "dxcc": "France",
+    "band": "10m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:46:08",
+    "frequency": "24.966 MHz",
+    "callsign": "EA8/ON4ZZZ",
+    "dxcc": "Belgium",
+    "band": "12m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:46:02",
+    "frequency": "21.038 MHz",
+    "callsign": "FT8WW",
+    "dxcc": "France",
+    "band": "15m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:46:00",
+    "frequency": "28.111 MHz",
+    "callsign": "F4ABC",
+    "dxcc": "France",
+    "band": "10m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:45:54",
+    "frequency": "10489.734 MHz",
+    "callsign": "FT8WW",
+    "dxcc": "France",
+    "band": "QO-100",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:45:52",
+    "frequency": "10489.627 MHz",
+    "callsign": "HK0NA",
+    "dxcc": "Colombia",
+    "band": "QO-100",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:45:46",
+    "frequency": "14.030 MHz",
+    "callsign": "PY0F",
+    "dxcc": "Fernando de Noronha",
+    "band": "20m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:45:44",
+    "frequency": "28.063 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "10m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:45:38",
+    "frequency": "21.075 MHz",
+    "callsign": "3Y0J",
+    "dxcc": "?",
+    "band": "15m",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:45:36",
+    "frequency": "21.064 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "15m",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:45:30",
+    "frequency": "28.159 MHz",
+    "callsign": "F4ABC",
+    "dxcc": "France",
+    "band": "10m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:45:28",
+    "frequency": "10489.754 MHz",
+    "callsign": "PY0F",
+    "dxcc": "Fernando de Noronha",
+    "band": "QO-100",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:45:22",
+    "frequency": "10489.734 MHz",
+    "callsign": "9N7AA",
+    "dxcc": "Nepal",
+    "band": "QO-100",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:45:20",
+    "frequency": "10489.736 MHz",
+    "callsign": "EA8/ON4ZZZ",
+    "dxcc": "Belgium",
+    "band": "QO-100",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:45:14",
+    "frequency": "24.955 MHz",
+    "callsign": "HK0NA",
+    "dxcc": "Colombia",
+    "band": "12m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:45:12",
+    "frequency": "24.976 MHz",
+    "callsign": "VK0DS",
+    "dxcc": "Australia",
+    "band": "12m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:45:06",
+    "frequency": "28.180 MHz",
+    "callsign": "A45XR",
+    "dxcc": "Oman",
+    "band": "10m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:45:04",
+    "frequency": "28.080 MHz",
+    "callsign": "F4ABC",
+    "dxcc": "France",
+    "band": "10m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:44:58",
+    "frequency": "10489.890 MHz",
+    "callsign": "VK0DS",
+    "dxcc": "Australia",
+    "band": "QO-100",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:44:56",
+    "frequency": "28.077 MHz",
+    "callsign": "HK0NA",
+    "dxcc": "Colombia",
+    "band": "10m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:44:50",
+    "frequency": "14.202 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "20m",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:44:48",
+    "frequency": "28.194 MHz",
+    "callsign": "F4ABC",
+    "dxcc": "France",
+    "band": "10m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:44:42",
+    "frequency": "24.954 MHz",
+    "callsign": "PY0F",
+    "dxcc": "Fernando de Noronha",
+    "band": "12m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:44:40",
+    "frequency": "28.003 MHz",
+    "callsign": "PY0F",
+    "dxcc": "Fernando de Noronha",
+    "band": "10m",
+    "mode": "CW"
+  },
+  {
+    "timestamp": "06:44:34",
+    "frequency": "7.030 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "40m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:44:32",
+    "frequency": "21.079 MHz",
+    "callsign": "PY0F",
+    "dxcc": "Fernando de Noronha",
+    "band": "15m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:44:26",
+    "frequency": "14.208 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "20m",
+    "mode": "FT4"
+  },
+  {
+    "timestamp": "06:44:24",
+    "frequency": "21.088 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "15m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:44:18",
+    "frequency": "14.057 MHz",
+    "callsign": "VK0DS",
+    "dxcc": "Australia",
+    "band": "20m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:44:16",
+    "frequency": "28.088 MHz",
+    "callsign": "9N7AA",
+    "dxcc": "Nepal",
+    "band": "10m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:44:10",
+    "frequency": "14.342 MHz",
+    "callsign": "PY0F",
+    "dxcc": "Fernando de Noronha",
+    "band": "20m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:44:08",
+    "frequency": "24.980 MHz",
+    "callsign": "EA8/ON4ZZZ",
+    "dxcc": "Belgium",
+    "band": "12m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:44:02",
+    "frequency": "21.035 MHz",
+    "callsign": "DL1ABC",
+    "dxcc": "Fed. Rep. of Germany",
+    "band": "15m",
+    "mode": "RTTY"
+  },
+  {
+    "timestamp": "06:44:00",
+    "frequency": "21.069 MHz",
+    "callsign": "FT8WW",
+    "dxcc": "France",
+    "band": "15m",
+    "mode": "SSB"
+  },
+  {
+    "timestamp": "06:43:54",
+    "frequency": "7.041 MHz",
+    "callsign": "FT8WW",
+    "dxcc": "France",
+    "band": "40m",
+    "mode": "FT8"
+  },
+  {
+    "timestamp": "06:43:52",
+    "frequency": "28.057 MHz",
+    "callsign": "F4ABC",
+    "dxcc": "France",
+    "band": "10m",
+    "mode": "SSB"
+  }
+]
