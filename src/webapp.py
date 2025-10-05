@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-# ---------------------- Paramètres ----------------------
+# ---------------------- ÉTAT ET PARAMS ----------------------
 spots = []  # {timestamp, timestamp_full, frequency, callsign, dxcc, band, mode}
 WATCHLIST = ["FT8WW", "3Y0J"]
 
@@ -29,7 +29,7 @@ SORTED_PREFIXES   = []
 MOST_WANTED_FILE = os.path.join(os.path.dirname(__file__), "most_wanted.json")
 MOST_WANTED = []  # liste d’entités (noms)
 
-# Mapping entité DXCC -> code ISO 3166-1 alpha-2 (lower) pour flagcdn
+# Mapping entité DXCC -> code ISO (flagcdn) + emojis fallback (pour PC sans emoji flags)
 ISO_CODE_MAP = {
     "Bouvet Island":"bv", "Crozet Island":"tf", "Scarborough Reef":"ph", "North Korea":"kp",
     "Palmyra & Jarvis":"um", "Navassa Island":"um", "Prince Edward & Marion":"za",
@@ -64,7 +64,7 @@ MOST_WANTED_DEFAULT = [
   "Comoros","Sao Tome & Principe"
 ]
 
-# ---------------------- Regex DX universelle ----------------------
+# ---------------------- REGEX CLUSTER ----------------------
 DX_PATTERN = re.compile(
     r"^DX de\s+([A-Z0-9/-]+)[>:]?\s+(\d+(?:\.\d+)?)\s+([A-Z0-9/]+)\s*(.*)$",
     re.IGNORECASE
@@ -100,7 +100,7 @@ def update_cty():
         r.raise_for_status()
         with open(CTY_FILE, "wb") as f:
             f.write(r.content)
-        # recharge
+        # recharge rapide
         tmp = {}
         with open(CTY_FILE, "r", encoding="utf-8", newline="") as f:
             reader = csv.reader(f)
@@ -119,7 +119,7 @@ def update_cty():
         print(f"[CTY] Erreur update: {e}")
         return False
 
-# ---------------------- Normalisation calls ----------------------
+# ---------------------- CALLS ----------------------
 def canon_call(cs: str) -> str:
     if not cs:
         return ""
@@ -130,7 +130,7 @@ def in_watchlist_norm(cs: str) -> bool:
     cc = canon_call(cs)
     return any(canon_call(x) == cc for x in WATCHLIST)
 
-# ---------------------- DX Utils ----------------------
+# ---------------------- DX UTILS ----------------------
 def all_candidates(cs: str):
     cs = (cs or "").upper().strip()
     cands = {cs}
@@ -196,7 +196,7 @@ def load_rss_with_fallback():
         d2 = load_rss(RSS_FALLBACK)
     return d1,d2
 
-# ---------------------- ClubLog ----------------------
+# ---------------------- CLUBLOG ----------------------
 CLUBLOG_URL="https://clublog.org/mostwanted.php"
 
 def fetch_most_wanted_from_clublog(limit=50):
@@ -247,7 +247,7 @@ def flag_png_for(country: str) -> str:
 def flag_emoji_for(country: str) -> str:
     return FLAG_EMOJI_MAP.get(country, "🌐")
 
-# ---------------------- Maintenance des spots ----------------------
+# ---------------------- MAINTENANCE SPOTS ----------------------
 def cleanup_spots():
     """Purge spots > 5 min (impacte le halo vert des 'Most Wanted')."""
     while True:
@@ -287,12 +287,12 @@ def spots_json():
 
 @app.route("/rss1.json")
 def rss1_json():
-    d1,_ = load_rss_with_fallback();
+    d1,_ = load_rss_with_fallback()
     return jsonify(d1)
 
 @app.route("/rss2.json")
 def rss2_json():
-    _,d2 = load_rss_with_fallback();
+    _,d2 = load_rss_with_fallback()
     return jsonify(d2)
 
 @app.route("/wanted.json")
@@ -306,19 +306,45 @@ def wanted_json():
     for c in MOST_WANTED[:50]:
         out.append({
             "country": c,
-            "flag_png": flag_png_for(c),      # image CDN (PC friendly)
-            "flag_emoji": flag_emoji_for(c),  # fallback emoji
+            "flag_png": flag_png_for(c),
+            "flag_emoji": flag_emoji_for(c),
             "active": c in active,
             "callsign": active.get(c,{}).get("callsign"),
             "freq": active.get(c,{}).get("freq")
         })
     return jsonify({"list": out})
 
+@app.route("/wanted_recent.json")
+def wanted_recent():
+    """Most Wanted entendus dans les 3 dernières heures (liste triée récents -> anciens)."""
+    now = datetime.utcnow()
+    recent = []
+    for s in spots:
+        try:
+            ts = datetime.strptime(s["timestamp_full"], "%Y-%m-%d %H:%M:%S")
+            if (now - ts) < timedelta(hours=3) and (s["dxcc"] in MOST_WANTED):
+                country = s["dxcc"]
+                rec = {
+                    "timestamp": s["timestamp_full"],
+                    "time": ts.strftime("%H:%M"),
+                    "callsign": s["callsign"],
+                    "dxcc": country,
+                    "freq": s["frequency"],
+                    "mode": s["mode"],
+                    "flag_png": flag_png_for(country),
+                    "flag_emoji": flag_emoji_for(country)
+                }
+                recent.append(rec)
+        except Exception:
+            pass
+    recent.sort(key=lambda x: x["timestamp"], reverse=True)
+    return jsonify({"list": recent[:30]})
+
 @app.route("/stats.json")
 def stats_json():
-    return jsonify({"connected": STATUS["connected"]})
+    return jsonify({"connected": STATUS["connected"], "last_update": STATUS["last_update"]})
 
-# ---------------------- Telnet ----------------------
+# ---------------------- TELNET ----------------------
 def telnet_task(cluster):
     try:
         tn=telnetlib.Telnet(cluster["host"], cluster["port"], timeout=20)
@@ -370,7 +396,7 @@ def telnet_task(cluster):
             STATUS["last_error"]=str(e)
             break
 
-# ---------------------- Simulation ----------------------
+# ---------------------- SIMULATION (fallback) ----------------------
 def simulate_spots():
     demo_calls = ["FT8WW","3Y0J","EA8/ON4ZZZ","DL1ABC","F4ABC","PY0F","VK0DS","A45XR"]
     while True:
@@ -394,7 +420,7 @@ def simulate_spots():
         del spots[300:]
         time.sleep(8)
 
-# ---------------------- Interface ----------------------
+# ---------------------- UI ----------------------
 @app.route("/", methods=["GET","POST"])
 def index():
     if request.method == "POST":
@@ -407,19 +433,13 @@ def index():
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root{
-  --bg:#181b24; --card:#1f2531; --muted:#cbd5e1; --primary:#60a5fa; --primary-600:#3b82f6; --ok:#22c55e; --err:#ef4444;
+  --bg:#181b24; --card:#1f2531; --muted:#cbd5e1; --primary:#60a5fa; --primary-600:#3b82f6; --ok:#22c55e; --err:#ef4444; --amber:#f59e0b;
 }
-*{box-sizing:border-box}
-body{background:var(--bg);color:#e5e7eb;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;margin:0;padding:18px;}
+*{box-sizing:border-box} body{background:var(--bg);color:#e5e7eb;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;margin:0;padding:18px;}
 h1{margin:0 0 14px 0;font-weight:800;letter-spacing:.3px;display:flex;align-items:center;gap:10px;}
 h1 .pill{font-size:14px;padding:6px 10px;border-radius:999px;background:#121620;color:#9fb3d9}
-.header{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
-
-/* Cards glassy */
 .card{background:rgba(31,37,49,.85);backdrop-filter:blur(6px);border-radius:16px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);}
-
-/* Top band (dashboard) */
-.topband{display:grid;grid-template-columns:1.4fr 1.2fr .9fr;gap:14px;width:100%;}
+.topband{display:grid;grid-template-columns:1.6fr 1.2fr .9fr;gap:14px;width:100%;}
 .top-left{display:flex;flex-direction:column;gap:10px}
 .formline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .formline input{padding:9px 10px;border-radius:10px;border:1px solid #2b3342;background:#121620;color:#fff;min-width:230px}
@@ -429,18 +449,17 @@ h1 .pill{font-size:14px;padding:6px 10px;border-radius:999px;background:#121620;
 .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#151b26;border:1px solid #2b3342}
 .badge button{color:#f87171;background:none;border:none;font-weight:700;cursor:pointer}
 .badge button:hover{color:#ef4444}
-
-.top-mid{display:flex;flex-direction:column}
-.kpis{display:flex;gap:10px;align-items:center;justify-content:flex-start;flex-wrap:wrap}
-.kpi{background:#141a23;border:1px solid #2b3342;padding:8px 12px;border-radius:12px;display:flex;align-items:center;gap:8px}
-.kpi strong{color:#e5f2ff}
-#ctyBtn{padding:8px 10px;border-radius:10px;border:1px solid #365172;background:#142034;color:#dbeafe;cursor:pointer}
-#ctyBtn:hover{background:#0f1a2b}
-#ctyStatus{margin-left:6px}
 .graphs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
 .graph-card{padding:10px;border:1px solid #2b3342}
 
-/* Layout body */
+.top-mid{display:flex;flex-direction:column;gap:10px}
+.kpis{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.kpill{display:flex;gap:8px;align-items:center;padding:8px 12px;border-radius:999px;background:#141a23;border:1px solid #2b3342}
+.kpill strong{color:#e5f2ff}
+#ctyBtn{padding:8px 10px;border-radius:10px;border:1px solid #365172;background:#142034;color:#dbeafe;cursor:pointer}
+#ctyBtn:hover{background:#0f1a2b}
+#ctyStatus{margin-left:6px}
+
 .main{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:14px}
 table{width:100%;border-collapse:collapse}
 th,td{padding:9px 10px;text-align:left}
@@ -451,7 +470,6 @@ td a{color:#9cc7ff;text-decoration:none;font-weight:700}
 td a:hover{color:white;text-decoration:underline}
 select{background:#121620;color:#fff;border:1px solid #2b3342;border-radius:10px;padding:6px}
 
-/* Right column */
 .section-title{margin:6px 0 8px 0;color:#dbeafe;font-weight:800}
 .wanted-item{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #101521}
 .wanted-item.active{background:rgba(34,197,94,0.13);color:#86efac;border-radius:8px}
@@ -459,12 +477,18 @@ select{background:#121620;color:#fff;border:1px solid #2b3342;border-radius:10px
 .wanted-spot{font-size:.92rem;opacity:.95}
 img.flag{width:24px;height:18px;border-radius:3px;vertical-align:middle}
 .rss a{color:#e5e7eb;text-decoration:none}
-.rss a:hover{text-decoration:underline;color:#bcd7ff}
+.rss a:hover{color:#bcd7ff;text-decoration:underline}
+
+/* Néon rétro pour Most Wanted récents */
+.neon{font-weight:700}
+.neon.green{color:#4ade80;text-shadow:0 0 8px rgba(34,197,94,.9)}
+.neon.amber{color:#facc15;text-shadow:0 0 8px rgba(245,158,11,.9)}
+.neon.gray{color:#94a3b8}
 </style>
 </head><body>
 <h1>📡 Radio Spot Watcher <span id="conn" class="pill">(connexion…)</span></h1>
 
-<!-- DASHBOARD TOP BAND -->
+<!-- BANDEAU DASHBOARD -->
 <div class="topband">
   <!-- left: add/watchlist + graphs -->
   <div class="top-left card">
@@ -494,26 +518,27 @@ img.flag{width:24px;height:18px;border-radius:3px;vertical-align:middle}
     </div>
   </div>
 
-  <!-- middle: DXCC controls + mini KPIs -->
+  <!-- middle: badges + DXCC update -->
   <div class="top-mid card">
     <div class="kpis">
-      <div class="kpi">🌐 <span>DXCC chargés :</span> <strong id="dxccCount">—</strong></div>
-      <div class="kpi">🧭 <span>Filtre bande :</span> <strong id="bandNow">Toutes</strong></div>
+      <div class="kpill">🌐 DXCC : <strong id="dxccCount">—</strong></div>
+      <div class="kpill">🟢 Cluster : <strong id="conn2">Hors ligne</strong></div>
+      <div class="kpill">⏱️ Dernière MAJ : <strong id="lastUpd">—</strong></div>
     </div>
-    <div style="margin-top:10px;">
+    <div>
       <button id="ctyBtn">🔄 Mettre à jour DXCC</button>
-      <span id="ctyStatus" style="margin-left:8px;"></span>
+      <span id="ctyStatus"></span>
     </div>
   </div>
 
-  <!-- right: state -->
-  <div class="card" style="display:flex;flex-direction:column;gap:10px;justify-content:center;align-items:flex-start;">
-    <div><strong>État cluster :</strong> <span id="conn2">Hors ligne</span></div>
-    <div><strong>Dernière MAJ :</strong> <span id="lastUpd">—</span></div>
+  <!-- right: Most Wanted entendus 3h -->
+  <div class="card" id="recentWanted" style="overflow:auto;max-height:320px;">
+    <div class="section-title">💡 Most Wanted entendus (3 dernières heures)</div>
+    <div id="recentList"><div>Chargement…</div></div>
   </div>
 </div>
 
-<!-- MAIN AREA -->
+<!-- PRINCIPAL -->
 <div class="main">
   <div class="card">
     <table>
@@ -542,10 +567,7 @@ img.flag{width:24px;height:18px;border-radius:3px;vertical-align:middle}
 <script>
 let bandFilter="",bandChart,pieChart;
 
-function applyFilter(){
-  bandFilter=document.getElementById("bandFilter").value;
-  document.getElementById("bandNow").innerText = bandFilter || "Toutes";
-}
+function applyFilter(){bandFilter=document.getElementById("bandFilter").value;}
 
 function inWatchlist(c){return {{ watchlist|tojson }}.includes(String(c||"").toUpperCase());}
 
@@ -608,8 +630,7 @@ async function refresh(){
   const conn=document.getElementById('conn'); const conn2=document.getElementById('conn2');
   conn.innerText=st.connected?"🟢 Connecté":"🔴 Hors ligne";
   conn2.innerText=st.connected?"Connecté":"Hors ligne";
-  conn.style.background=st.connected?"#122117":"#2b1b1b";
-  document.getElementById('lastUpd').innerText = new Date().toLocaleTimeString();
+  document.getElementById('lastUpd').innerText = st.last_update || '—';
 }
 
 async function loadRSS(){
@@ -634,15 +655,34 @@ async function loadWanted(){
   document.getElementById('wantedList').innerHTML = html || '<div>Aucune donnée</div>';
 }
 
+// 🔆 Most Wanted entendus dans les 3 dernières heures (néon rétro)
+async function loadRecentWanted(){
+  const data = await (await fetch('/wanted_recent.json')).json();
+  const list = data.list || [];
+  let html='';
+  const now = new Date();
+  for(const it of list){
+    const ageMin = (now - new Date(it.timestamp.replace(' ', 'T')+'Z')) / 60000;
+    const neonClass = ageMin < 15 ? 'neon green' : ageMin < 180 ? 'neon amber' : 'neon gray';
+    const flagImg = it.flag_png ? `<img class="flag" src="${it.flag_png}" onerror="this.style.display='none'">` : '';
+    const flagEmoji = `<span style="margin-left:6px">${it.flag_emoji||'🌐'}</span>`;
+    html += `<div class="${neonClass}" style="padding:4px 0;">
+      ${flagImg}${flagEmoji} ${it.dxcc} — <b>${it.callsign}</b> — ${it.freq} — ${it.mode} — ${it.time}Z
+    </div>`;
+  }
+  document.getElementById('recentList').innerHTML = html || '<div class="neon gray">Aucun DX rare signalé</div>';
+}
+
 setInterval(refresh,5000);
 setInterval(loadRSS,600000);
 setInterval(loadWanted,20000);
-window.onload=()=>{ refresh(); loadRSS(); loadWanted(); refreshDXCCCount(); };
+setInterval(loadRecentWanted,60000);
+window.onload=()=>{ refresh(); loadRSS(); loadWanted(); refreshDXCCCount(); loadRecentWanted(); };
 </script>
 </body></html>"""
     return render_template_string(html, watchlist=WATCHLIST)
 
-# ---------------------- Boot ----------------------
+# ---------------------- BOOT ----------------------
 if __name__ == "__main__":
     load_cty()
     init_most_wanted()
