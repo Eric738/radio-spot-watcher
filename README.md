@@ -116,6 +116,6 @@ Tu peux modifier :
 ---
 
 ## 👤 Crédits
-Développé par **F1SMV (Eric)**  
+Pensé par **F1SMV (Eric) et developpé par ChatGPT5**  
 Interface et améliorations inspirées des tableaux de bord DX modernes (ClubLog, DXHeat).  
 Design responsive et clair pour une utilisation sur PC, tablette ou mobile.

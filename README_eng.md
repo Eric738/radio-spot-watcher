@@ -25,3 +25,7 @@ git clone https://github.com/Eric738/radio-spot-watcher.git
 cd radio-spot-watcher
 chmod +x install.sh
 ./install.
+
+Designed by **F1SMV (Eric) and developed by ChatGPT5**
+Interface and improvements inspired by modern DX dashboards (ClubLog, DXHeat).
+Responsive and clear design for use on PC, tablet, or mobile.
