@@ -29,7 +29,7 @@ SORTED_PREFIXES   = []
 MOST_WANTED_FILE = os.path.join(os.path.dirname(__file__), "most_wanted.json")
 MOST_WANTED = []  # liste d’entités (noms)
 
-# Mapping entité DXCC -> code ISO (flagcdn) + emojis fallback (pour PC sans emoji flags)
+# Mapping entité DXCC -> code ISO (flagcdn) + emojis fallback
 ISO_CODE_MAP = {
     "Bouvet Island":"bv", "Crozet Island":"tf", "Scarborough Reef":"ph", "North Korea":"kp",
     "Palmyra & Jarvis":"um", "Navassa Island":"um", "Prince Edward & Marion":"za",
@@ -76,7 +76,7 @@ def load_cty():
     global PREFIX_TO_COUNTRY, SORTED_PREFIXES
     PREFIX_TO_COUNTRY.clear()
     if not os.path.isfile(CTY_FILE) or os.path.getsize(CTY_FILE) < 200:
-        update_cty()  # tentative de téléchargement
+        update_cty()
 
     try:
         with open(CTY_FILE, "r", encoding="utf-8", newline="") as f:
@@ -100,7 +100,6 @@ def update_cty():
         r.raise_for_status()
         with open(CTY_FILE, "wb") as f:
             f.write(r.content)
-        # recharge rapide
         tmp = {}
         with open(CTY_FILE, "r", encoding="utf-8", newline="") as f:
             reader = csv.reader(f)
@@ -497,7 +496,7 @@ img.flag{width:24px;height:18px;border-radius:3px;vertical-align:middle}
         <input name="new_call" placeholder="Ajouter un indicatif à surveiller">
         <button>➕ Ajouter</button>
       </form>
-      <label>Filtrer :
+      <label>Filtrer bande :
         <select id="bandFilter" onchange="applyFilter()">
           <option value="">Toutes</option>
           <option>160m</option><option>80m</option><option>40m</option><option>30m</option>
@@ -506,10 +505,16 @@ img.flag{width:24px;height:18px;border-radius:3px;vertical-align:middle}
           <option>70cm</option><option>QO-100</option>
         </select>
       </label>
+      <label>Filtrer mode :
+        <select id="modeFilter" onchange="applyFilter()">
+          <option value="">Tous</option>
+          <!-- options dynamiques alimentées par JS -->
+        </select>
+      </label>
     </div>
     <div class="watchlist">
       {% for c in watchlist %}
-        <span class="badge">{{ c }} <button title="Supprimer" onclick='removeCall({{ c|tojson }})'>🗑️</button></span>
+        <span class="badge">{{ c }} <button type="button" title="Supprimer" onclick='removeCall(event, {{ c|tojson }})'>🗑️</button></span>
       {% endfor %}
     </div>
     <div class="graphs">
@@ -565,13 +570,17 @@ img.flag{width:24px;height:18px;border-radius:3px;vertical-align:middle}
 </div>
 
 <script>
-let bandFilter="",bandChart,pieChart;
+let bandFilter="", modeFilter="", bandChart, pieChart;
 
-function applyFilter(){bandFilter=document.getElementById("bandFilter").value;}
+function applyFilter(){
+  bandFilter = document.getElementById("bandFilter").value;
+  modeFilter = document.getElementById("modeFilter").value;
+}
 
 function inWatchlist(c){return {{ watchlist|tojson }}.includes(String(c||"").toUpperCase());}
 
-async function removeCall(call){
+async function removeCall(ev, call){
+  if(ev){ ev.preventDefault(); ev.stopPropagation(); }
   const res = await fetch('/remove_call',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({call})});
   if(res.ok){location.reload();} else {alert("Impossible de supprimer "+call);}
 }
@@ -599,7 +608,11 @@ document.getElementById('ctyBtn').onclick=async()=>{
 
 function updateCharts(spots){
   const counts={};
-  for(const s of spots){ if(s.band && (!bandFilter||s.band==bandFilter)) counts[s.band]=(counts[s.band]||0)+1; }
+  for(const s of spots){
+    if(s.band && (!bandFilter||s.band==bandFilter) && (!modeFilter||s.mode==modeFilter)) {
+      counts[s.band]=(counts[s.band]||0)+1;
+    }
+  }
   const labels=Object.keys(counts),values=Object.values(counts);
   const colors=labels.map(l=>({"160m":"#78350f","80m":"#7c3aed","40m":"#22c55e","30m":"#06b6d4","20m":"#3b82f6","17m":"#0ea5e9","15m":"#f472b6","12m":"#f59e0b","10m":"#fb923c","6m":"#10b981","4m":"#14b8a6","2m":"#ec4899","70cm":"#bef264","QO-100":"#ef4444"}[l]||"#9ca3af"));
   if(!bandChart){bandChart=new Chart(document.getElementById('barChart'),{type:'bar',data:{labels,datasets:[{data:values,backgroundColor:colors}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});}
@@ -608,11 +621,32 @@ function updateCharts(spots){
   else{pieChart.data.labels=labels;pieChart.data.datasets[0].data=values;pieChart.data.datasets[0].backgroundColor=colors;pieChart.update();}
 }
 
+function updateModeOptions(spots){
+  // Construit la liste des modes observés (tri alpha, uniques)
+  const set = new Set();
+  for(const s of spots){
+    const m = (s.mode||'').toUpperCase();
+    if(m && m !== '?') set.add(m);
+  }
+  const modes = Array.from(set).sort();
+  const sel = document.getElementById('modeFilter');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Tous</option>' + modes.map(m=>`<option value="${m}">${m}</option>`).join('');
+  // Réapplique le choix courant si encore présent
+  if(current && modes.includes(current)) sel.value = current;
+  else if(current) sel.value = '';
+}
+
 async function refresh(){
   const d=await (await fetch('/spots.json')).json();
+
+  // MAJ liste des modes dynamiquement
+  updateModeOptions(d);
+
   let r='';
   for(const s of d){
     if(bandFilter && s.band!==bandFilter) continue;
+    if(modeFilter && (s.mode||'')!==modeFilter) continue;
     const css=inWatchlist(s.callsign)?' style="color:#facc15;font-weight:800;"':'';
     r+=`<tr${css}>
       <td>${s.timestamp||''}</td>
@@ -697,4 +731,4 @@ if __name__ == "__main__":
             threading.Thread(target=simulate_spots, daemon=True).start()
     threading.Thread(target=delayed_sim, daemon=True).start()
 
-    app.run(host="0.0.0.0", port=8000, debug=False) 
+    app.run(host="0.0.0.0", port=8000, debug=False)
