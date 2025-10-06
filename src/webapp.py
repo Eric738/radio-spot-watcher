@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from flask import Flask, render_template_string, jsonify, request
-import telnetlib, random, time, threading, requests, re, csv, os, json
+import telnetlib, random, time, threading, requests, re, csv, os, json, socket
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -18,7 +18,13 @@ RSS_URL1 = "https://www.dx-world.net/feed/"
 RSS_URL2 = "https://feeds.feedburner.com/OnAllBands"
 RSS_FALLBACK = "https://www.arrl.org/news/rss"
 
-STATUS = {"connected": False, "last_error": None, "last_update": None}
+STATUS = {
+    "connected": False,
+    "last_error": None,
+    "last_update": None,
+    "latency_ms": None,      # latence TCP (ms) vers le cluster
+    "solar": {"sfi": None, "kp": None, "sunspots": None, "updated": None}
+}
 
 CTY_URL  = "https://www.country-files.com/cty/cty.csv"
 CTY_FILE = os.path.join(os.path.dirname(__file__), "cty.csv")
@@ -71,6 +77,8 @@ DX_PATTERN = re.compile(
 )
 
 # ---------------------- DXCC ----------------------
+MIN_CTYSIZE_BYTES = 50_000  # sécurité anti-fichier vide
+
 def load_cty():
     """Charge cty.csv -> map préfixe -> pays. Télécharge si manquant."""
     global PREFIX_TO_COUNTRY, SORTED_PREFIXES
@@ -80,14 +88,29 @@ def load_cty():
 
     try:
         with open(CTY_FILE, "r", encoding="utf-8", newline="") as f:
-            reader = csv.reader(f)
+            # Sniffer pour accepter ',' ou ';'
+            sample = f.read(4096)
+            f.seek(0)
+            try:
+                dialect = csv.Sniffer().sniff(sample, delimiters=",;")
+                delim = dialect.delimiter
+            except Exception:
+                delim = ","
+            reader = csv.reader(f, delimiter=delim)
             for row in reader:
                 if len(row) < 2: continue
                 p = (row[0] or "").strip().upper()
                 c = (row[1] or "").strip()
                 if p and c: PREFIX_TO_COUNTRY[p] = c
+        # Petit fallback minimal (au cas où)
+        PREFIX_TO_COUNTRY.update({
+            "F": "France","DL": "Germany","G": "England","M": "England","GM": "Scotland",
+            "I": "Italy","EA": "Spain","CT": "Portugal","ON": "Belgium","PA": "Netherlands",
+            "K": "United States","W": "United States","N": "United States","VE": "Canada",
+            "JA": "Japan","VK": "Australia","ZS": "South Africa","PY": "Brazil","LU": "Argentina",
+        })
         SORTED_PREFIXES = sorted(PREFIX_TO_COUNTRY.keys(), key=len, reverse=True)
-        print(f"[CTY] {len(PREFIX_TO_COUNTRY)} préfixes chargés.")
+        print(f"[CTY] {len(PREFIX_TO_COUNTRY)} préfixes chargés (delim='{delim}').")
     except Exception as e:
         print(f"[CTY] Erreur lecture: {e}")
         PREFIX_TO_COUNTRY = {}
@@ -96,22 +119,18 @@ def load_cty():
 def update_cty():
     """Télécharge la dernière version de cty.csv et recharge la base."""
     try:
-        r = requests.get(CTY_URL, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+        r = requests.get(
+            CTY_URL,
+            timeout=30,
+            headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36"},
+            allow_redirects=True,
+        )
         r.raise_for_status()
+        if len(r.content) < MIN_CTYSIZE_BYTES:
+            raise RuntimeError(f"cty.csv trop petit ({len(r.content)} octets)")
         with open(CTY_FILE, "wb") as f:
             f.write(r.content)
-        tmp = {}
-        with open(CTY_FILE, "r", encoding="utf-8", newline="") as f:
-            reader = csv.reader(f)
-            for row in reader:
-                if len(row) < 2: continue
-                p = (row[0] or "").strip().upper()
-                c = (row[1] or "").strip()
-                if p and c: tmp[p] = c
-        if tmp:
-            global PREFIX_TO_COUNTRY, SORTED_PREFIXES
-            PREFIX_TO_COUNTRY = tmp
-            SORTED_PREFIXES   = sorted(PREFIX_TO_COUNTRY.keys(), key=len, reverse=True)
+        load_cty()
         print("[CTY] Mise à jour réussie.")
         return True
     except Exception as e:
@@ -167,12 +186,34 @@ def guess_band(f: float) -> str:
     if 10489.540<=f<=10489.902: return "QO-100"
     return "?"
 
+# Tables simplifiées pour inférer le mode par fréquence
+FT8_WINDOWS = [
+    (3.573, 3.575), (7.074, 7.076), (10.136, 10.138),
+    (14.074, 14.076), (18.100,18.102), (21.074,21.076),
+    (24.915,24.917), (28.074,28.076), (50.313,50.314)
+]
+CW_HINTS   = [(7.000,7.035), (14.000,14.070), (21.000,21.070)]
+SSB_HINTS  = [(7.180,7.300), (14.150,14.350), (21.200,21.450)]
+
+def in_ranges(f, ranges):
+    for a,b in ranges:
+        if a<=f<=b: return True
+    return False
+
 def detect_mode(txt: str, f=None):
+    # 1) indices textuels
     if txt:
         t = txt.upper()
         for k in ["FT8","FT4","CW","SSB","FM","DIGI","RTTY","PSK31","JT65","JT9","WSPR","Q65","MSK144","FSK441","USB","LSB"]:
             if k in t: return "SSB" if k in ("USB","LSB") else k
-    if f and 14.07<=f<=14.09: return "FT8"
+        if "CQ" in t and "FT8" in t: return "FT8"
+        if "CQ" in t and "CW" in t: return "CW"
+    # 2) par fréquence
+    if isinstance(f,(int,float)):
+        if in_ranges(f, FT8_WINDOWS): return "FT8"
+        if in_ranges(f, CW_HINTS):    return "CW"
+        if in_ranges(f, SSB_HINTS):   return "SSB"
+        if 14.070 <= f <= 14.073:     return "PSK"
     return "?"
 
 # ---------------------- RSS ----------------------
@@ -260,6 +301,43 @@ def cleanup_spots():
         spots[:] = [s for s in spots if is_recent(s)]
         time.sleep(60)
 
+# ---------------------- PROPAGATION & LATENCE ----------------------
+HAMQSL_JSON = "https://www.hamqsl.com/solarjson.php"
+
+def refresh_solar():
+    while True:
+        try:
+            r = requests.get(HAMQSL_JSON, timeout=20, headers={"User-Agent":"Mozilla/5.0"})
+            if r.ok:
+                j = r.json()
+                sfi = j.get("solar",{}).get("solarf", None)
+                kp  = j.get("geomag",{}).get("kpindex", None)
+                ss  = j.get("solar",{}).get("sunspots", None)
+                STATUS["solar"] = {
+                    "sfi": int(float(sfi)) if sfi not in (None,"") else None,
+                    "kp":  int(float(kp))  if kp  not in (None,"") else None,
+                    "sunspots": int(float(ss)) if ss not in (None,"") else None,
+                    "updated": datetime.utcnow().strftime("%H:%M")
+                }
+        except Exception as e:
+            print("[SOLAR] Erreur:", e)
+        time.sleep(3*3600)  # toutes les 3h
+
+def measure_latency(host, port, timeout=2.0):
+    t0 = time.perf_counter()
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            pass
+        return int((time.perf_counter() - t0) * 1000)
+    except Exception:
+        return None
+
+def latency_loop():
+    while True:
+        ms = measure_latency(DEFAULT_CLUSTER["host"], DEFAULT_CLUSTER["port"])
+        STATUS["latency_ms"] = ms
+        time.sleep(300)
+
 # ---------------------- API ----------------------
 @app.route("/remove_call", methods=["POST"])
 def remove_call():
@@ -315,7 +393,7 @@ def wanted_json():
 
 @app.route("/wanted_recent.json")
 def wanted_recent():
-    """Most Wanted entendus dans les 3 dernières heures (liste triée récents -> anciens)."""
+    """Most Wanted entendus dans les 3 dernières heures."""
     now = datetime.utcnow()
     recent = []
     for s in spots:
@@ -341,7 +419,12 @@ def wanted_recent():
 
 @app.route("/stats.json")
 def stats_json():
-    return jsonify({"connected": STATUS["connected"], "last_update": STATUS["last_update"]})
+    return jsonify({
+        "connected": STATUS["connected"],
+        "last_update": STATUS["last_update"],
+        "latency_ms": STATUS["latency_ms"],
+        "solar": STATUS["solar"],
+    })
 
 # ---------------------- TELNET ----------------------
 def telnet_task(cluster):
@@ -508,7 +591,6 @@ img.flag{width:24px;height:18px;border-radius:3px;vertical-align:middle}
       <label>Filtrer mode :
         <select id="modeFilter" onchange="applyFilter()">
           <option value="">Tous</option>
-          <!-- options dynamiques alimentées par JS -->
         </select>
       </label>
     </div>
@@ -523,11 +605,12 @@ img.flag{width:24px;height:18px;border-radius:3px;vertical-align:middle}
     </div>
   </div>
 
-  <!-- middle: badges + DXCC update -->
+  <!-- middle: badges + DXCC update + PROP -->
   <div class="top-mid card">
-    <div class="kpis">
-      <div class="kpill">🌐 DXCC : <strong id="dxccCount">—</strong></div>
-      <div class="kpill">🟢 Cluster : <strong id="conn2">Hors ligne</strong></div>
+    <div class="kpis" id="kpiRow">
+      <div class="kpill">🌐 DXCC : <strong id="dxccCount">—</strong> <span id="dxccToday" style="margin-left:6px;opacity:.8"></span></div>
+      <div class="kpill">🟢 Cluster : <strong id="conn2">Hors ligne</strong> <span id="latency" style="margin-left:6px;opacity:.8"></span></div>
+      <div class="kpill">☀️ SFI: <strong id="sfi">—</strong>  |  🌪️ Kp: <strong id="kp">—</strong>  |  🌞 <strong id="sun">—</strong></div>
       <div class="kpill">⏱️ Dernière MAJ : <strong id="lastUpd">—</strong></div>
     </div>
     <div>
@@ -622,7 +705,6 @@ function updateCharts(spots){
 }
 
 function updateModeOptions(spots){
-  // Construit la liste des modes observés (tri alpha, uniques)
   const set = new Set();
   for(const s of spots){
     const m = (s.mode||'').toUpperCase();
@@ -631,8 +713,7 @@ function updateModeOptions(spots){
   const modes = Array.from(set).sort();
   const sel = document.getElementById('modeFilter');
   const current = sel.value;
-  sel.innerHTML = '<option value="">Tous</option>' + modes.map(m=>`<option value="${m}">${m}</option>`).join('');
-  // Réapplique le choix courant si encore présent
+  sel.innerHTML = '<option value=\"\">Tous</option>' + modes.map(m=>`<option value=\"${m}\">${m}</option>`).join('');
   if(current && modes.includes(current)) sel.value = current;
   else if(current) sel.value = '';
 }
@@ -640,38 +721,48 @@ function updateModeOptions(spots){
 async function refresh(){
   const d=await (await fetch('/spots.json')).json();
 
-  // MAJ liste des modes dynamiquement
   updateModeOptions(d);
 
   let r='';
+  const dxccToday = new Set();
   for(const s of d){
     if(bandFilter && s.band!==bandFilter) continue;
     if(modeFilter && (s.mode||'')!==modeFilter) continue;
-    const css=inWatchlist(s.callsign)?' style="color:#facc15;font-weight:800;"':'';
+    const css=inWatchlist(s.callsign)?' style=\"color:#facc15;font-weight:800;\"':'';
     r+=`<tr${css}>
       <td>${s.timestamp||''}</td>
       <td>${s.frequency||''}</td>
-      <td><a href="https://www.qrz.com/db/${s.callsign}" target="_blank">${s.callsign||''}</a></td>
+      <td><a href=\"https://www.qrz.com/db/${s.callsign}\" target=\"_blank\">${s.callsign||''}</a></td>
       <td>${s.dxcc||''}</td>
       <td>${s.band||''}</td>
       <td>${s.mode||'?'}</td>
     </tr>`;
+    if(s.dxcc && s.dxcc!=='?') dxccToday.add(s.dxcc);
   }
-  document.getElementById('tb').innerHTML=r||'<tr><td colspan="6">Aucun spot</td></tr>';
+  document.getElementById('tb').innerHTML=r||'<tr><td colspan=\"6\">Aucun spot</td></tr>';
   updateCharts(d);
 
   const st=await (await fetch('/stats.json')).json();
   const conn=document.getElementById('conn'); const conn2=document.getElementById('conn2');
-  conn.innerText=st.connected?"🟢 Connecté":"🔴 Hors ligne";
-  conn2.innerText=st.connected?"Connecté":"Hors ligne";
+  conn.innerText=st.connected?\"🟢 Connecté\":\"🔴 Hors ligne\";
+  conn2.innerText=st.connected?\"Connecté\":\"Hors ligne\";
   document.getElementById('lastUpd').innerText = st.last_update || '—';
+  document.getElementById('latency').innerText = st.latency_ms?`(${st.latency_ms} ms)`:'';
+  // Solar badges
+  if(st.solar){
+    document.getElementById('sfi').innerText = st.solar.sfi ?? '—';
+    document.getElementById('kp').innerText  = st.solar.kp  ?? '—';
+    document.getElementById('sun').innerText = st.solar.sunspots ?? '—';
+  }
+  // DXCC today (approx) – simple indicateur
+  document.getElementById('dxccToday').innerText = dxccToday.size ? `(↑ ${dxccToday.size} aujourd’hui)` : '';
 }
 
 async function loadRSS(){
   const d1=await (await fetch('/rss1.json')).json();
   const d2=await (await fetch('/rss2.json')).json();
-  document.getElementById('rsslist1').innerHTML=d1.map(e=>`<li><a href="${e.link}" target="_blank">${e.title}</a></li>`).join('');
-  document.getElementById('rsslist2').innerHTML=d2.map(e=>`<li><a href="${e.link}" target="_blank">${e.title}</a></li>`).join('');
+  document.getElementById('rsslist1').innerHTML=d1.map(e=>`<li><a href=\"${e.link}\" target=\"_blank\">${e.title}</a></li>`).join('');
+  document.getElementById('rsslist2').innerHTML=d2.map(e=>`<li><a href=\"${e.link}\" target=\"_blank\">${e.title}</a></li>`).join('');
 }
 
 async function loadWanted(){
@@ -680,11 +771,11 @@ async function loadWanted(){
   let html='';
   for(const it of list){
     const cls = it.active ? 'wanted-item active' : 'wanted-item';
-    const flagImg = it.flag_png ? `<img class="flag" src="${it.flag_png}" onerror="this.style.display='none'">` : '';
-    const flagEmoji = `<span style="margin-left:6px">${it.flag_emoji||'🌐'}</span>`;
-    const left = `<div class="wanted-name">${flagImg}${flagEmoji}<span>${it.country}</span></div>`;
-    const right = it.active ? `<span class="wanted-spot">🟢 ${it.callsign} @ ${it.freq}</span>` : `<span class="wanted-spot" style="opacity:.6">(no spot)</span>`;
-    html += `<div class="${cls}">${left}${right}</div>`;
+    const flagImg = it.flag_png ? `<img class=\"flag\" src=\"${it.flag_png}\" onerror=\"this.style.display='none'\">` : '';
+    const flagEmoji = `<span style=\"margin-left:6px\">${it.flag_emoji||'🌐'}</span>`;
+    const left = `<div class=\"wanted-name\">${flagImg}${flagEmoji}<span>${it.country}</span></div>`;
+    const right = it.active ? `<span class=\"wanted-spot\">🟢 ${it.callsign} @ ${it.freq}</span>` : `<span class=\"wanted-spot\" style=\"opacity:.6\">(no spot)</span>`;
+    html += `<div class=\"${cls}\">${left}${right}</div>`;
   }
   document.getElementById('wantedList').innerHTML = html || '<div>Aucune donnée</div>';
 }
@@ -698,13 +789,13 @@ async function loadRecentWanted(){
   for(const it of list){
     const ageMin = (now - new Date(it.timestamp.replace(' ', 'T')+'Z')) / 60000;
     const neonClass = ageMin < 15 ? 'neon green' : ageMin < 180 ? 'neon amber' : 'neon gray';
-    const flagImg = it.flag_png ? `<img class="flag" src="${it.flag_png}" onerror="this.style.display='none'">` : '';
-    const flagEmoji = `<span style="margin-left:6px">${it.flag_emoji||'🌐'}</span>`;
-    html += `<div class="${neonClass}" style="padding:4px 0;">
+    const flagImg = it.flag_png ? `<img class=\"flag\" src=\"${it.flag_png}\" onerror=\"this.style.display='none'\">` : '';
+    const flagEmoji = `<span style=\"margin-left:6px\">${it.flag_emoji||'🌐'}</span>`;
+    html += `<div class=\"${neonClass}\" style=\"padding:4px 0;\">
       ${flagImg}${flagEmoji} ${it.dxcc} — <b>${it.callsign}</b> — ${it.freq} — ${it.mode} — ${it.time}Z
     </div>`;
   }
-  document.getElementById('recentList').innerHTML = html || '<div class="neon gray">Aucun DX rare signalé</div>';
+  document.getElementById('recentList').innerHTML = html || '<div class=\"neon gray\">Aucun DX rare signalé</div>';
 }
 
 setInterval(refresh,5000);
@@ -722,6 +813,8 @@ if __name__ == "__main__":
     init_most_wanted()
     threading.Thread(target=cleanup_spots, daemon=True).start()
     threading.Thread(target=telnet_task, args=(DEFAULT_CLUSTER,), daemon=True).start()
+    threading.Thread(target=latency_loop, daemon=True).start()
+    threading.Thread(target=refresh_solar, daemon=True).start()
 
     # Fallback simulation si pas de connexion après 10s
     def delayed_sim():
@@ -731,4 +824,4 @@ if __name__ == "__main__":
             threading.Thread(target=simulate_spots, daemon=True).start()
     threading.Thread(target=delayed_sim, daemon=True).start()
 
-    app.run(host="0.0.0.0", port=8000, debug=False)
+    app.run(host="0.0.0.0", port=8000, debug=False) 
