@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ============================================================
-# Radio Spot Watcher — v2.7.1 stable (production)
+# Radio Spot Watcher — v2.7.0 stable (production)
 # - Cluster F5LEN robuste: TCP ping, attente prompt login:, keepalive, reconnexion auto 5 min
-# - Carte Leaflet: vert=normal, rouge clignotant 10 s = WATCHLIST/MostWanted
+# - Carte Leaflet: vert=normal, rouge clignotant 10 s = WATCHLIST ou MostWanted
 # - Watchlist complète (ajout & suppression)
-# - Liens QRZ.com dans le tableau
-# - Graphiques colorés (Chart.js)
-# - Panneau solaire (fetch immédiat + 1h)
-# - Flux RSS lisibles (DX-World, OnAllBands -> fallback ARRL)
+# - Most Wanted ClubLog (cache + MAJ hebdo)
+# - Flux RSS (DX-World, OnAllBands -> fallback ARRL)
+# - Panneau solaire (hamqsl)
 # - MAJ DXCC, stats, compteur spots réels (UI + console 5 min)
 # - Port 8000, debug False
 # ============================================================
@@ -17,7 +16,7 @@ from flask import Flask, render_template_string, jsonify, request
 import telnetlib, random, time, threading, requests, re, csv, os, json, socket
 from datetime import datetime, timedelta
 
-VERSION = "v2.7.1 stable"
+VERSION = "v2.7.0 stable"
 app = Flask(__name__)
 
 # ---------------------- ÉTAT ----------------------
@@ -25,21 +24,24 @@ spots = []  # {timestamp, timestamp_full, frequency, callsign, dxcc, band, mode,
 REAL_SPOT_COUNT = 0
 REAL_SPOT_COUNT_LOCK = threading.Lock()
 
-WATCHLIST = ["FT8WW", "3Y0J", "J38LD"]  # éditable dans l'UI
+WATCHLIST = ["FT8WW", "3Y0J", "J38LD"]  # tu peux modifier
 
 DEFAULT_CLUSTER = {"host": "dxcluster.f5len.org", "port": 7373, "login": "F1SMV"}
-STATUS = {"connected": False, "last_update": None, "last_error": None}
+STATUS = {
+    "connected": False,
+    "last_update": None,
+    "last_error": None,
+}
 
 # ---------------------- DXCC (préfixes) ----------------------
 CTY_URL  = "https://www.country-files.com/cty/cty.csv"
-BASE_DIR = os.path.dirname(__file__)
-CTY_FILE = os.path.join(BASE_DIR, "cty.csv")
+CTY_FILE = os.path.join(os.path.dirname(__file__), "cty.csv")
 PREFIX_TO_COUNTRY = {}
 SORTED_PREFIXES   = []
 
 def update_cty():
     try:
-        r = requests.get(CTY_URL, timeout=25, headers={"User-Agent":"Mozilla/5.0"})
+        r = requests.get(CTY_URL, timeout=25)
         r.raise_for_status()
         with open(CTY_FILE, "wb") as f:
             f.write(r.content)
@@ -139,27 +141,20 @@ def cleanup_spots():
 # ---------------------- SOLAIRE ----------------------
 def refresh_solar():
     HAMQSL_JSON = "https://www.hamqsl.com/solarjson.php"
-
-    def fetch_once():
+    while True:
         try:
             r = requests.get(HAMQSL_JSON, timeout=20, headers={"User-Agent":"Mozilla/5.0"})
             if r.ok:
                 j = r.json()
                 app.config["SOLAR"] = {
                     "sfi": j.get("solar",{}).get("solarf"),
-                    "kp":  j.get("geomag",{}).get("kpindex"),
+                    "kp": j.get("geomag",{}).get("kpindex"),
                     "sun": j.get("solar",{}).get("sunspots"),
-                    "at":  datetime.utcnow().strftime("%H:%M")
+                    "at": datetime.utcnow().strftime("%H:%M")
                 }
-                return True
         except Exception as e:
             print("[SOLAR] Erreur:", e)
-        return False
-
-    fetch_once()               # premier fetch immédiat
-    while True:
-        time.sleep(3600)       # puis toutes les heures
-        fetch_once()
+        time.sleep(3*3600)
 
 # ---------------------- RSS ----------------------
 def load_rss(url):
@@ -186,7 +181,7 @@ def rss2():
     return jsonify(data)
 
 # ---------------------- Most Wanted (ClubLog) ----------------------
-MOST_FILE = os.path.join(BASE_DIR, "most_wanted.json")
+MOST_FILE = os.path.join(os.path.dirname(__file__), "most_wanted.json")
 DEFAULT_MW = ["Bouvet Island","Crozet Island","Scarborough Reef","North Korea","Palmyra & Jarvis",
               "Navassa Island","Prince Edward & Marion","South Sandwich","Macquarie Island",
               "Peter I Island","Kure Island","Heard Island","Andaman & Nicobar","Palestine",
@@ -313,6 +308,7 @@ def cluster_worker():
             try:
                 tn.read_until(b"login:", timeout=4)
             except Exception:
+                # fallback : scruter tout retour
                 read_until_any(tn, [b"login:", b"call:"], timeout=4)
             tn.write((DEFAULT_CLUSTER["login"]+"\n").encode())
             time.sleep(0.5)
@@ -373,11 +369,11 @@ def cluster_worker():
             STATUS["connected"]=False
             STATUS["last_error"]=str(e)
             print("[CLUSTER] Boucle interrompue:", e)
-            time.sleep(30)  # petit backoff
+            time.sleep(30)  # petit backoff avant retry
 
 # ---------------------- SIMULATION ----------------------
 def simulate_spots():
-    demo = ["F4ABC","DL1XYZ","JA1NQZ","VK0DS","PY0F","A45XR","ZS1ABC","EA8/ON4ZZZ","VP2MAA","4STAB","LX25GDG","IW2NEF","KI7QCF","NC4XL","9Y4M"]
+    demo = ["F4ABC","DL1XYZ","JA1NQZ","VK0DS","PY0F","A45XR","ZS1ABC","EA8/ON4ZZZ","VP2MAA","4STAB","LX25GDG","IW2NEF","KI7QCF"]
     while True:
         f = random.choice([7.032,7.074,10.136,14.074,18.100,21.074,24.902,28.074,50.313])
         call = random.choice(demo)
@@ -431,22 +427,13 @@ h2{margin:0 0 12px 0}
 .formline{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}
 .formline input{padding:8px;border-radius:8px;border:1px solid #2b3342;background:#0d1421;color:#fff}
 .formline button{padding:8px 12px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer}
-.watchlist{display:flex;flex-wrap:wrap;gap:8px}
 .badge{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border-radius:999px;background:#151b26;border:1px solid #2b3342}
-.badge .trash{background:none;border:none;color:#f87171;cursor:pointer;font-weight:700}
-.badge .trash:hover{color:#ef4444}
 .tbl{width:100%;border-collapse:collapse}
 .tbl th,.tbl td{padding:8px 10px;text-align:left}
 .tbl thead th{position:sticky;top:0;background:#1a2232}
 .tbl tr:nth-child(even){background:#0f1522}
 .small{opacity:.85}
 .col2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-
-/* liens lisibles sur fond sombre */
-a{color:#cfe3ff;text-decoration:none}
-a:hover{color:#ffffff;text-decoration:underline}
-.card ul#rss1 a, .card ul#rss2 a { color:#cfe3ff }
-.card ul#rss1 a:hover, .card ul#rss2 a:hover { color:#ffffff }
 </style>
 </head><body>
 <h2>📡 Radio Spot Watcher — {{ version }}</h2>
@@ -459,28 +446,16 @@ a:hover{color:#ffffff;text-decoration:underline}
       <span class="kpill">Dernière MAJ: <b id="last">—</b></span>
       <span class="kpill">SFI/Kp/Sun: <b id="solar">—</b></span>
     </div>
-
     <div class="formline">
       <form method="POST" style="display:flex;gap:8px;align-items:center">
         <input name="new_call" placeholder="Ajouter un indicatif à surveiller">
         <button>Ajouter</button>
       </form>
-
-      <div class="badge">WATCHLIST:</div>
-      <div class="watchlist" id="wlBox">
-        {% for c in watchlist %}
-          <span class="badge">{{ c }}
-            <button type="button" class="trash" title="Supprimer" onclick="removeWL('{{ c }}')">🗑️</button>
-          </span>
-        {% endfor %}
-      </div>
-
+      <div class="badge">WATCHLIST: <span id="wl">{{ ', '.join(watchlist) }}</span></div>
       <button id="updateDXCC" class="badge" style="cursor:pointer">Mettre à jour DXCC</button>
       <span id="dxccInfo" class="small"></span>
     </div>
-
     <div id="map"></div>
-
     <div class="col2" style="margin-top:10px">
       <div class="card" style="padding:8px"><canvas id="barChart"></canvas></div>
       <div class="card" style="padding:8px"><canvas id="pieChart"></canvas></div>
@@ -492,7 +467,6 @@ a:hover{color:#ffffff;text-decoration:underline}
       <thead><tr><th>Heure</th><th>Fréq</th><th>Indicatif</th><th>DXCC</th><th>Bande</th><th>Mode</th><th></th></tr></thead>
       <tbody id="tb"><tr><td colspan="7">Chargement…</td></tr></tbody>
     </table>
-
     <div class="card" style="margin-top:10px">
       <div><b>Most Wanted (ClubLog)</b></div>
       <ul id="mw" class="small"><li>Chargement…</li></ul>
@@ -510,7 +484,6 @@ a:hover{color:#ffffff;text-decoration:underline}
 
 <script>
 const WATCHLIST = {{ watchlist|tojson }};
-const PALETTE = ['#60a5fa','#34d399','#fbbf24','#f472b6','#f87171','#a78bfa','#22c55e','#eab308','#2dd4bf','#fb7185'];
 
 // Map
 const map = L.map('map', { worldCopyJump:true, preferCanvas:true }).setView([20,0], 2);
@@ -522,6 +495,7 @@ function k5(s){
 }
 function isHot(s){
   const inWL = WATCHLIST.includes(String(s.callsign||'').toUpperCase());
+  // MostWanted (nom DXCC exact dans la liste) -> color rouge aussi
   return inWL || (window._MW && window._MW.has(s.dxcc));
 }
 function upsertMarker(s){
@@ -561,36 +535,18 @@ function updateCharts(data){
   }
   const bL=Object.keys(byBand), bV=Object.values(byBand);
   const mL=Object.keys(byMode), mV=Object.values(byMode);
-
   if(!bandChart){
-    bandChart = new Chart(document.getElementById('barChart'), {
-      type:'bar',
-      data:{labels:bL, datasets:[{data:bV, backgroundColor:bL.map((_,i)=>PALETTE[i%PALETTE.length])}]},
-      options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}
-    });
-    modeChart = new Chart(document.getElementById('pieChart'), {
-      type:'pie',
-      data:{labels:mL, datasets:[{data:mV, backgroundColor:mL.map((_,i)=>PALETTE[i%PALETTE.length])}]},
-      options:{plugins:{legend:{position:'bottom'}}}
-    });
+    bandChart = new Chart(document.getElementById('barChart'), {type:'bar', data:{labels:bL, datasets:[{data:bV, backgroundColor:bL.map(()=>"#6b7280")}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+    modeChart = new Chart(document.getElementById('pieChart'), {type:'pie', data:{labels:mL, datasets:[{data:mV, backgroundColor:mL.map(()=>"#6b7280")}]}, options:{plugins:{legend:{position:'bottom'}}}});
   }else{
-    bandChart.data.labels=bL; bandChart.data.datasets[0].data=bV;
-    bandChart.data.datasets[0].backgroundColor = bL.map((_,i)=>PALETTE[i%PALETTE.length]);
-    bandChart.update();
-
-    modeChart.data.labels=mL; modeChart.data.datasets[0].data=mV;
-    modeChart.data.datasets[0].backgroundColor = mL.map((_,i)=>PALETTE[i%PALETTE.length]);
-    modeChart.update();
+    bandChart.data.labels=bL; bandChart.data.datasets[0].data=bV; bandChart.update();
+    modeChart.data.labels=mL; modeChart.data.datasets[0].data=mV; modeChart.update();
   }
 }
 
-// Watchlist: suppression (UI -> backend)
-async function removeWL(call){
-  const r = await fetch('/remove_call',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({call})
-  });
+// Watchlist: suppression
+async function delCall(call){
+  const r = await fetch('/remove_call',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({call})});
   const j = await r.json();
   if(j.ok){ location.reload(); } else { alert("Suppression impossible"); }
 }
@@ -607,8 +563,8 @@ document.getElementById('updateDXCC').onclick = async ()=>{
 async function loadSide(){
   const r1 = await (await fetch('/rss1.json')).json();
   const r2 = await (await fetch('/rss2.json')).json();
-  document.getElementById('rss1').innerHTML = r1.map(e=>`<li><a href="${e.link}" target="_blank" rel="noopener">${e.title}</a></li>`).join('') || '<li>—</li>';
-  document.getElementById('rss2').innerHTML = r2.map(e=>`<li><a href="${e.link}" target="_blank" rel="noopener">${e.title}</a></li>`).join('') || '<li>—</li>';
+  document.getElementById('rss1').innerHTML = r1.map(e=>`<li><a href="${e.link}" target="_blank">${e.title}</a></li>`).join('') || '<li>—</li>';
+  document.getElementById('rss2').innerHTML = r2.map(e=>`<li><a href="${e.link}" target="_blank">${e.title}</a></li>`).join('') || '<li>—</li>';
   const mw = await (await fetch('/wanted.json')).json();
   window._MW = new Set(mw.list||[]);
   document.getElementById('mw').innerHTML = (mw.list||[]).map(x=>`<li>${x}</li>`).join('') || '<li>—</li>';
@@ -625,11 +581,11 @@ async function refresh(){
     html += `<tr${hot?' style="color:#f87171;font-weight:600"':''}>
       <td>${s.timestamp||''}</td>
       <td>${s.frequency||''}</td>
-      <td><a href="https://www.qrz.com/db/${s.callsign}" target="_blank" rel="noopener">${s.callsign||''}</a></td>
+      <td>${s.callsign||''}</td>
       <td>${s.dxcc||''}</td>
       <td>${s.band||''}</td>
       <td>${s.mode||'?'}</td>
-      <td>${inWL?`<button onclick="removeWL('${s.callsign}')">🗑️</button>`:''}</td>
+      <td>${inWL?`<button onclick="delCall('${s.callsign}')">🗑️</button>`:''}</td>
     </tr>`;
     upsertMarker(s);
   }
@@ -640,9 +596,8 @@ async function refresh(){
   document.getElementById('conn').innerText = st.connected ? 'Connecté' : 'Hors ligne';
   document.getElementById('rcnt').innerText = st.real_spot_count || 0;
   document.getElementById('last').innerText = st.last_update || '—';
-  const sol = st.solar || {};
-  document.getElementById('solar').innerText =
-    `${(sol.sfi??'–')}/${(sol.kp??'–')}/${(sol.sun??'–')}`;
+  const sol = st.solar;
+  document.getElementById('solar').innerText = sol ? `${sol.sfi||'–'}/${sol.kp||'–'}/${sol.sun||'–'}` : '—';
 }
 setInterval(refresh, 5000);
 setInterval(loadSide, 600000);
