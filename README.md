@@ -218,15 +218,10 @@ Idées moyennes :
 - Carte : possibilité de masquer/afficher certaines bandes.
 - Bouton "Compacter" l’UI pour les petits écrans.
 
-Long terme :
-
-- Export des spots (CSV).
-- Filtre par distance (si grid dispo).
-- Notifications sonores / visuelles sur nouveau spot d’un call surveillé.
 
 📜 Licence / usage
 
-Projet hobby radioamateur pensé par Eric F1SMV et réalisé par Chatgpt5
+Projet hobby radioamateur pensé par Eric F1SMV et réalisé par Chatgpt5.
 Utilisation personnelle OK.
 Toute re-distribution publique doit citer l’auteur original du code et ne pas supprimer les mentions de version.
 

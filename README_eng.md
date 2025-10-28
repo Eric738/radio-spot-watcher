@@ -221,7 +221,6 @@ Mid-term:
 
 Long-term:
 
-- CSV export of recent spots.
 - Distance/range filtering using locators.
 - Optional audio/visual alert on watched calls.
 
