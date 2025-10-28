@@ -1,0 +1,11 @@
+{
+  "background": "#ffffff",
+  "spot_text": "#1e293b",
+  "spot_highlight": "#3b82f6",
+  "watch_add": "#22c55e",
+  "watch_del": "#ef4444",
+  "rss_color": "#facc15",
+  "table_alt": "#f8fafc",
+  "table_even": "#e2e8f0",
+  "footer_text": "#64748b"
+} 
