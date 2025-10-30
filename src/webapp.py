@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Radio Spot Watcher v2.84
+Radio Spot Watcher v2.85
 Date: 2025-10-28
 Améliorations visuelles (palette configurable) + corrections et robustesse
+Modifié : charts remontés, Most Wanted déplacé en bas, horloges ajoutées,
+et palette étendue de 10 couleurs pour les charts.
 """
 
 import os
@@ -23,7 +25,7 @@ import requests
 from flask import Flask, render_template_string, jsonify, send_file, Response, make_response
 
 # Configuration and environment overrides
-VERSION = "v2.84 (2025-10-28)"
+VERSION = "v2.83 (2025-10-28)"
 HTTP_PORT = int(os.environ.get('PORT', 8000))
 CLUSTER_HOST = os.environ.get('CLUSTER_HOST', 'dxfun.com')
 CLUSTER_PORT = int(os.environ.get('CLUSTER_PORT', 8000))
@@ -190,7 +192,7 @@ class RadioSpotWatcher:
             band = "UNK"
 
         comment_upper = (comment or "").upper()
-        if any(x in comment_upper for x in ("QO-100", "QO100", "QO 100")):
+        if any(m in comment_upper for m in ("QO-100", "QO100", "QO 100")):
             band = "QO-100"
 
         if any(m in comment_upper for m in ("FT8", "FT-8")):
@@ -593,7 +595,6 @@ class RadioSpotWatcher:
 
 # -----------------------
 # HTML Template with palette UI + visual improvements
-# (updated: charts moved above Most Wanted; watch-bg variable + palette watchBg entries + band additions)
 # -----------------------
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
@@ -603,7 +604,6 @@ HTML_TEMPLATE = '''
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Radio Spot Watcher</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- optional markercluster (uncomment if desired) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <style>
@@ -617,7 +617,7 @@ HTML_TEMPLATE = '''
             --divider: #e6e9ee;
             --card-shadow: 0 1px 3px rgba(11,20,35,0.06);
             --table-row-hover: #f8fafc;
-            --watch-bg: var(--accent); /* background for watched rows; can be overridden by palette */
+            --watch-bg: var(--accent);
         }
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color:var(--page-bg); color:var(--text); line-height:1.6; }
@@ -643,7 +643,6 @@ HTML_TEMPLATE = '''
         tr:hover td { background:var(--table-row-hover); }
         tr:nth-child(even) td { background: #fff; }
         tr.watchhit { background: var(--watch-bg) !important; color:#fff; }
-        /* ensure call link remains readable when row is highlighted */
         tr.watchhit .call-link { color: inherit !important; text-decoration:underline; font-weight:700; }
         .call-link { color:var(--accent); text-decoration:none; font-weight:600; }
         .call-link:hover { text-decoration:underline; }
@@ -698,6 +697,7 @@ HTML_TEMPLATE = '''
                     <option value="ocean">Ocean</option>
                     <option value="sunset">Sunset</option>
                     <option value="contrast">High Contrast</option>
+                    <option value="extended">Extended (10 couleurs)</option>
                 </select>
             </div>
         </div>
@@ -752,6 +752,23 @@ HTML_TEMPLATE = '''
         </div>
 
         <div class="right-column">
+            <!-- Horloges (alignées avec la colonne filtres/charts) -->
+            <div class="card">
+                <h2>Horloges</h2>
+                <div style="display:flex; gap:1rem; align-items:center;">
+                    <div style="min-width:150px;">
+                        <div style="font-size:0.85rem; color:var(--muted);">UTC</div>
+                        <div id="utc-time" style="font-family: monospace; font-weight:700; color:var(--accent); font-size:1.05rem;">--:--:--</div>
+                        <div id="utc-date" style="font-size:0.85rem; color:var(--muted);">---</div>
+                    </div>
+                    <div style="min-width:150px;">
+                        <div style="font-size:0.85rem; color:var(--muted);">Heure locale</div>
+                        <div id="local-time" style="font-family: monospace; font-weight:700; color:var(--accent-strong); font-size:1.05rem;">--:--:--</div>
+                        <div id="local-date" style="font-size:0.85rem; color:var(--muted);">---</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="card">
                 <h2>Filtres</h2>
                 <div class="filter-controls">
@@ -766,7 +783,7 @@ HTML_TEMPLATE = '''
                 </div>
             </div>
 
-            <!-- Charts remontés ici -->
+            <!-- Charts remontés avant RSS / Most Wanted -->
             <div class="card">
                 <h2>Activité par bande</h2>
                 <div class="chart-container">
@@ -781,15 +798,15 @@ HTML_TEMPLATE = '''
                 </div>
             </div>
 
-            <!-- Most Wanted déplacé plus bas -->
-            <div class="card">
-                <h2>Most Wanted DXCC</h2>
-                <div id="most-wanted"></div>
-            </div>
-
             <div class="card">
                 <h2>Flux RSS DX</h2>
                 <div id="rss-content"></div>
+            </div>
+
+            <!-- Most Wanted déplacé en bas -->
+            <div class="card">
+                <h2>Most Wanted DXCC</h2>
+                <div id="most-wanted"></div>
             </div>
         </div>
     </div>
@@ -828,13 +845,19 @@ HTML_TEMPLATE = '''
             'UNK': '#94a3b8'
         };
 
-        // palettes: overriding accent, band colors and watchBg
+        // PALETTE ET COULEURS ETENDUES (10 couleurs)
+        const DEFAULT_PALETTE = [
+            '#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa',
+            '#f472b6', '#22d3ee', '#84cc16', '#fb7185', '#f59e0b'
+        ];
+
         const PALETTES = {
             'default': {
                 '--accent': '#3b82f6',
                 '--accent-strong': '#2563eb',
                 watchBg: '#3b82f6',
-                bands: DEFAULT_BAND_COLORS
+                bands: DEFAULT_BAND_COLORS,
+                palette_colors: DEFAULT_PALETTE
             },
             'ocean': {
                 '--accent': '#0ea5a4',
@@ -843,16 +866,18 @@ HTML_TEMPLATE = '''
                 bands: {
                     '160m':'#064e3b','80m':'#0ea5a4','40m':'#0891b2','30m':'#06b6d4','20m':'#3b82f6','17m':'#60a5fa',
                     '15m':'#7c3aed','12m':'#38bdf8','10m':'#06b6d4','6m':'#06b6d4','2m':'#0b6b65','70cm':'#0284c7','QO-100':'#7dd3fc','UNK':'#94a3b8'
-                }
+                },
+                palette_colors: ['#064e3b','#0ea5a4','#0891b2','#06b6d4','#3b82f6','#60a5fa','#7c3aed','#38bdf8','#06b6d4','#0b6b65']
             },
             'sunset': {
                 '--accent': '#f97316',
                 '--accent-strong': '#ef4444',
-                watchBg: '#7c2d12',  // darker shade so the call stays readable
+                watchBg: '#7c2d12',
                 bands: {
                     '160m':'#7c2d12','80m':'#ea580c','40m':'#f59e0b','30m':'#f97316','20m':'#ef4444','17m':'#f43f5e',
                     '15m':'#fb7185','12m':'#f97316','10m':'#f43f5e','6m':'#f472b6','2m':'#b45309','70cm':'#c2410c','QO-100':'#fb7185','UNK':'#94a3b8'
-                }
+                },
+                palette_colors: ['#7c2d12','#ea580c','#f59e0b','#f97316','#ef4444','#f43f5e','#fb7185','#f97316','#f43f5e','#f472b6']
             },
             'contrast': {
                 '--accent': '#111827',
@@ -861,7 +886,18 @@ HTML_TEMPLATE = '''
                 bands: {
                     '160m':'#111827','80m':'#374151','40m':'#4b5563','30m':'#6b7280','20m':'#0f172a','17m':'#111827',
                     '15m':'#111827','12m':'#111827','10m':'#0f172a','6m':'#374151','2m':'#1f2937','70cm':'#374151','QO-100':'#111827','UNK':'#0f172a'
-                }
+                },
+                palette_colors: ['#111827','#374151','#4b5563','#6b7280','#0f172a','#111827','#111827','#111827','#374151','#1f2937']
+            },
+            'extended': {
+                '--accent': '#7c3aed',
+                '--accent-strong': '#6c5ce7',
+                watchBg: '#7c3aed',
+                bands: {
+                    '160m':'#7c3aed','80m':'#60a5fa','40m':'#34d399','30m':'#f59e0b','20m':'#fb7185','17m':'#f472b6',
+                    '15m':'#a78bfa','12m':'#06b6d4','10m':'#10b981','6m':'#fd7b9c','2m':'#ef4444','70cm':'#00b894','QO-100':'#00cec9','UNK':'#94a3b8'
+                },
+                palette_colors: ['#7c3aed','#60a5fa','#34d399','#f59e0b','#fb7185','#f472b6','#a78bfa','#06b6d4','#10b981','#00b894']
             }
         };
 
@@ -873,6 +909,7 @@ HTML_TEMPLATE = '''
             initFilters();
             loadWatchlist();
             initPalette();
+            initClocks();
             updateData();
             setInterval(updateData, 5000);
             document.getElementById('watchlist-input').addEventListener('keypress', function(e) {
@@ -888,7 +925,7 @@ HTML_TEMPLATE = '''
             sel.addEventListener('change', function() {
                 localStorage.setItem('uiPalette', sel.value);
                 applyPalette(sel.value);
-                updateData(); // refresh markers colors
+                updateData(); // refresh markers / charts colors
             });
         }
 
@@ -899,6 +936,8 @@ HTML_TEMPLATE = '''
             if (p['watchBg']) document.documentElement.style.setProperty('--watch-bg', p['watchBg']);
             // map band colors
             window.BAND_COLORS = Object.assign({}, DEFAULT_BAND_COLORS, p.bands || {});
+            // palette colors for charts
+            window.PALETTE_COLORS = p.palette_colors || DEFAULT_PALETTE;
         }
 
         function initMap() {
@@ -1024,7 +1063,7 @@ HTML_TEMPLATE = '''
                     const marker = L.circleMarker([spot.lat, spot.lon], {
                         radius: 6,
                         fillColor: color,
-                        color: '#cbd5e1',   // bord gris
+                        color: '#cbd5e1',
                         weight: 1.5,
                         opacity: 1,
                         fillOpacity: 0.95
@@ -1083,6 +1122,7 @@ HTML_TEMPLATE = '''
             updateChart('mode-chart', modeCounts, { 'FT8':'#0ea5b3','FT4':'#06b6d4','CW':'#ef4444','SSB':'#3b82f6','DIGI':'#a78bfa','UNK':'#94a3b8' });
         }
 
+        // Canvas-based simple bar-chart renderer using palette of 10 colors when needed
         function updateChart(canvasId, data, colorMap = {}) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
@@ -1090,16 +1130,18 @@ HTML_TEMPLATE = '''
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (!data || Object.keys(data).length === 0) return;
             const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
-            const values = Object.values(data);
+            const values = entries.map(e => e[1]);
             const maxValue = Math.max(...values);
             const barWidth = Math.max(20, (canvas.width / entries.length) - 10);
             const maxBarHeight = canvas.height - 40;
+            const palette = window.PALETTE_COLORS && window.PALETTE_COLORS.length ? window.PALETTE_COLORS : DEFAULT_PALETTE;
+
             entries.forEach((entry, index) => {
                 const [label, value] = entry;
                 const barHeight = (value / maxValue) * maxBarHeight;
                 const x = index * (barWidth + 10) + 10;
                 const y = canvas.height - barHeight - 20;
-                const color = colorMap[label] || colorMap[label.toUpperCase()] || '#3b82f6';
+                const color = colorMap[label] || colorMap[label.toUpperCase()] || palette[index % palette.length] || '#3b82f6';
                 ctx.fillStyle = color;
                 ctx.fillRect(x, y, barWidth, barHeight);
                 ctx.fillStyle = '#1e293b';
@@ -1167,6 +1209,36 @@ HTML_TEMPLATE = '''
 
         function exportCSV() {
             window.location.href = '/export.csv';
+        }
+
+        // Clocks: update every second
+        function initClocks() {
+            const utcTimeEl = document.getElementById('utc-time');
+            const utcDateEl = document.getElementById('utc-date');
+            const localTimeEl = document.getElementById('local-time');
+            const localDateEl = document.getElementById('local-date');
+
+            function formatLocal(d){
+                const time = d.toLocaleTimeString(undefined, {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+                const date = d.toLocaleDateString(undefined, {weekday:'short', year:'numeric', month:'short', day:'numeric'});
+                return {time,date};
+            }
+            function formatUTC(d){
+                const time = new Intl.DateTimeFormat('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false, timeZone: 'UTC' }).format(d);
+                const date = new Intl.DateTimeFormat('en-GB', { weekday:'short', year:'numeric', month:'short', day:'numeric', timeZone: 'UTC' }).format(d);
+                return {time,date};
+            }
+            function update(){
+                const now = new Date();
+                const loc = formatLocal(now);
+                const utc = formatUTC(now);
+                if(utcTimeEl) utcTimeEl.textContent = utc.time + ' UTC';
+                if(utcDateEl) utcDateEl.textContent = utc.date.replace(/,/g,'') + ' (UTC)';
+                if(localTimeEl) localTimeEl.textContent = loc.time;
+                if(localDateEl) localDateEl.textContent = loc.date.replace(/,/g,'');
+            }
+            update();
+            setInterval(update, 1000);
         }
     </script>
 </body>
