@@ -1,176 +1,292 @@
-Radio Spot Watcher — v2.85 (2025-10-28)
-======================================
+# Radio Spot Watcher — v2.87 (2025-10-31)
 
-Résumé
-------
-Radio Spot Watcher est une web‑app légère pour suivre les spots DX en temps réel depuis un DX cluster (telnet), afficher la carte, le tableau des spots, flux RSS, watchlist et statistiques (charts).  
-La version 2.85 ajoute des améliorations visuelles, une palette étendue (option "extended" de 10 couleurs) et un bloc Horloges (UTC + heure locale). Les charts sont dessinés en canvas (renderer maison) et la palette est configurable.
+## Résumé
+**Radio Spot Watcher** est une application web légère qui permet de surveiller en temps réel les spots DX reçus sur un cluster telnet. 
+Elle affiche les spots sur une carte du monde, un tableau dynamique, des graphiques d’activité, des flux RSS et une watchlist. 
+Cette version 2.87 introduit la **mise à jour automatique de la base DXCC** (`dxcc_latest.json`), un **thème clair modernisé**, et des améliorations de performances.
 
-Principales fonctionnalités
----------------------------
-- Connexion en lecture à un DX cluster (TCP/telnet) et parsing de lignes "DX".
-- Tableau des derniers spots (watchlist, filtres Bande/Mode).
-- Carte Leaflet avec cluster et marquage des spots.
-- Export CSV des spots.
-- Flux RSS (récupération périodique).
-- Bloc "Most Wanted" (statique par défaut).
-- Statistiques / charts (activité par bande et par mode).
-- UI avec sélection de palette (incluant palette "extended" 10 couleurs).
-- Horloges affichant UTC et heure locale (mise à jour chaque seconde).
-- Persistence locale des spots (spots.json) et logs (rspot.log).
+---
 
-Prérequis
----------
-- Python 3.8+ recommandé
-- pip
-- Dépendances Python :
-  - Flask
-  - requests
-  - feedparser
+## Fonctionnalités principales
+- Connexion automatique au **cluster DXFun.com (port 8000)** avec bascule automatique vers un cluster de secours (F5LEN). 
+- Tableau temps réel des spots (avec filtres bande/mode). 
+- Carte du monde interactive (Leaflet.js). 
+- Export CSV des spots reçus. 
+- Flux RSS intégrés (DX-World, ClubLog). 
+- Section “Most Wanted DXCC” mise à jour automatiquement. 
+- Graphiques d’activité par bande et heure (Matplotlib). 
+- Interface responsive et thème clair personnalisable. 
+- Watchlist avec ajout/suppression et surbrillance automatique. 
+- Synchronisation automatique du fichier DXCC. 
+- Persistance locale des données (`spots.json`, `rspot.log`).
 
-Installation rapide
-------------------
-1. Cloner / copier le script python (le fichier principal ; ex: rspot.py).
-2. Installer les dépendances :
-   - pip install Flask requests feedparser
-   - (optionnel) créer un virtualenv : python -m venv venv && source venv/bin/activate
+---
 
-Configuration (variables d'environnement)
------------------------------------------
-Le script lit quelques variables d'environnement (avec valeurs par défaut) :
+## Prérequis
+- **Python 3.8+** 
+- **pip** 
+- Modules Python :
+  ```bash
+  pip install Flask requests feedparser matplotlib
 
-- PORT : port HTTP (par défaut 8000)
-- CLUSTER_HOST : hôte DX cluster (par défaut dxfun.com)
-- CLUSTER_PORT : port DX cluster (par défaut 8000)
-- CLUSTER_FALLBACK_HOST / CLUSTER_FALLBACK_PORT : fallback si primaire indisponible
-- CLUSTER_CALLSIGN : callsign envoyé au cluster (par défaut F1ABC)
-- MAX_SPOTS : nombre maximal de spots conservés en mémoire (défaut 200)
-- MAX_MAP_SPOTS : nombre maximal de spots affichés sur la carte (défaut 30)
-- RSS_UPDATE_INTERVAL : intervalle de mise à jour RSS en secondes (défaut 300)
-- WANTED_UPDATE_INTERVAL : intervalle refresh Most Wanted (défaut 600)
-- SPOTS_FILE : chemin du fichier de persistence des spots (défaut spots.json)
-- CTY_FILE : fichier cty CSV (défaut cty.csv)
-- LOG_FILE : fichier log (défaut rspot.log)
 
-Lancer l'application
---------------------
-Depuis le dossier contenant le script :
+---
 
-- Avec Python directement :
-  - python rspot.py
-  - par défaut écoute sur 0.0.0.0:8000 (ou PORT si défini).
+Installation
 
-- Tester l'interface :
-  - Ouvrir http://127.0.0.1:8000 dans un navigateur.
+1. Cloner ou copier le projet :
+
+git clone https://github.com/Eric738/radio-spot-watcher.git
+cd radio-spot-watcher
+
+
+2. (Optionnel) Créer un environnement virtuel :
+
+python3 -m venv venv
+source venv/bin/activate
+
+
+3. Lancer :
+
+./start.sh
+
+
+4. Ouvrir le navigateur :
+
+http://127.0.0.1:8000
+
+
+
+
+---
+
+Variables d’environnement
+
+Variable Description Valeur par défaut
+
+PORT Port HTTP 8000
+CLUSTER_HOST Hôte du cluster dxfun.com
+CLUSTER_PORT Port cluster 8000
+CLUSTER_FALLBACK_HOST Cluster de secours f5len.dxcluster.net
+CLUSTER_FALLBACK_PORT Port secours 8000
+CLUSTER_CALLSIGN Indicatif utilisateur F1SMV
+MAX_SPOTS Nombre de spots en mémoire 200
+MAX_MAP_SPOTS Spots visibles sur la carte 30
+RSS_UPDATE_INTERVAL Mise à jour RSS (sec) 300
+WANTED_UPDATE_INTERVAL Mise à jour Most Wanted (sec) 600
+DXCC_FILE Base DXCC locale dxcc_latest.json
+SPOTS_FILE Fichier spots spots.json
+LOG_FILE Journal d’activité rspot.log
+
+
+
+---
 
 Endpoints HTTP
---------------
-- /            -> Interface web (HTML)
-- /spots.json  -> JSON contenant la liste des spots et map_spots
-  Exemple : { "spots": [...], "map_spots": [...] }
-- /status.json -> Informations de statut (cluster_connected, cluster_host, version, dxcc_update, total_spots)
-- /rss.json    -> Données RSS récupérées { "entries": [...] }
-- /wanted.json -> Liste Most Wanted { "wanted": [...] }
-- /stats.json  -> Agrégats : { "bands": {...}, "modes": {...} }
-- /export.csv  -> Export CSV téléchargeable des spots
-- /healthz     -> Ping de santé { "status": "ok", "version": "..." }
 
-Fichiers générés / utilisés
----------------------------
-- spots.json  : sauvegarde JSON des spots (persisté régulièrement et à chaque ajout).
-- cty.csv     : (optionnel) fichier CTY pour résolution des préfixes -> pays. Si absent, fallback minimal embarqué est utilisé.
-- rspot.log   : logs d'activité (rotating file handler si disponible).
+/ → interface principale
 
-Personnalisation UI
--------------------
-- Palette : le sélecteur "Palette" permet de choisir entre plusieurs thèmes (default, ocean, sunset, contrast, extended). L'option "extended" fournit une palette de 10 couleurs utilisée par défaut pour les charts.
-- Watchlist : stockée dans localStorage côté client.
-- Filtres Bande / Mode : persistés côté navigateur (localStorage).
-- Taille de la carte : persistée côté navigateur.
+/spots.json → liste complète des spots
 
-Dépendances Python
-------------------
-- Flask
-- requests
-- feedparser
+/status.json → état (cluster, DXCC, version)
 
-Installation via requirements.txt (exemple)
-------------------------------------------
-Créer un fichier requirements.txt :
-Flask
-requests
-feedparser
+/rss.json → flux RSS
 
-Puis :
-- pip install -r requirements.txt
+/wanted.json → liste “Most Wanted”
 
-Service systemd (exemple)
--------------------------
-Fichier /etc/systemd/system/radiospot.service (adapter chemins et utilisateur):
+/stats.json → statistiques
+
+/export.csv → export CSV
+
+/healthz → test de santé
+
+
+
+---
+
+Fichiers générés
+
+Fichier Rôle
+
+spots.json Historique des spots
+dxcc_latest.json Base DXCC auto-mise à jour
+rspot.log Journal d’activité
+
+
+
+---
+
+Personnalisation
+
+Thèmes disponibles : default, ocean, sunset, contrast.
+
+Watchlist enregistrée dans le navigateur.
+
+Filtres bande/mode mémorisés par session.
+
+Taille de carte et couleurs de spots sauvegardées.
+
+Palette de 10 couleurs sélectionnable dans l’interface.
+
+
+
+---
+
+Mise à jour automatique DXCC
+
+Au démarrage :
+
+1. Charge le fichier local dxcc_latest.json.
+
+
+2. Vérifie s’il existe une version plus récente sur :
+https://raw.githubusercontent.com/Eric738/radio-spot-watcher/main/dxcc_latest.json
+
+
+3. Met à jour automatiquement si nécessaire.
+
+
+4. Journalise :
+
+[DXCC] Mise à jour réussie (340 entités)
+
+
+
+
+---
+
+Exemple de service systemd
+
+Créer /etc/systemd/system/radiospot.service :
+
 [Unit]
 Description=Radio Spot Watcher
 After=network.target
 
 [Service]
-User=youruser
-WorkingDirectory=/chemin/vers/le/projet
-ExecStart=/usr/bin/python3 /chemin/vers/le/projet/rspot.py
+User=radio
+WorkingDirectory=/home/radio/radio-spot-watcher
+ExecStart=/usr/bin/python3 /home/radio/radio-spot-watcher/src/webapp.py
 Restart=on-failure
 Environment=PORT=8000
 
 [Install]
 WantedBy=multi-user.target
 
-puis :
-- sudo systemctl daemon-reload
-- sudo systemctl enable radiospot
-- sudo systemctl start radiospot
-- sudo journalctl -u radiospot -f
+Puis activer :
 
-Notes opérationnelles / dépannage
----------------------------------
-- Port déjà utilisé : vérifier que le port configuré (8000) est libre ; change le via la variable PORT.
-- Problèmes de connexion au cluster : vérifier host/port, connectivity réseau et firewall.
-- RSS : certains flux peuvent refuser des requêtes fréquentes ou block CORS côté client. Le script récupère les flux côté serveur via feedparser.
-- CTY : si cty.csv mal formaté, l'appli utilisera le fallback embarqué. Pour de meilleures correspondances, fournis un cty.csv avec colonnes prefix, country, lat, lon, continent.
-- Logs : consulte rspot.log pour diagnostic. Si RotatingFileHandler indisponible, les logs seront toujours affichés sur stdout.
-- Sauvegarde spots : spots.json est utilisé pour restaurer l'état au redémarrage — si corrompu, supprime-le pour repartir à zéro.
+sudo systemctl daemon-reload
+sudo systemctl enable radiospot
+sudo systemctl start radiospot
 
-Changelog (v2.85)
------------------
-- Date : 2025-10-28
-- Améliorations visuelles et robustesse générale
-- Palette configurable et ajout d'une palette "extended" de 10 couleurs
-- Bloc Horloges ajouté (UTC + heure locale)
-- Charts (canvas renderer maison) maintenus ; palette utilisée en boucle pour colorer les barres
-- Charts remontés dans la colonne droite (au-dessus du flux RSS)
-- Bloc Most Wanted déplacé en bas de la colonne droite
-- Diverses corrections : robustesse parsing cluster, gestion buffer, sauvegarde spots, gestion des threads
 
+---
+
+Dépannage
+
+Aucun spot affiché
+Vérifier la connexion :
+
+ping dxfun.com
+telnet dxfun.com 8000
+
+DXCC manquant
+Créer un fichier vide :
+
+touch src/dxcc_latest.json
+
+Il sera mis à jour automatiquement.
+
+Port occupé
+Modifier dans start.sh :
+
+export PORT=8080
+
+RSS vide
+Attendre quelques minutes (limite de requêtes).
+
+
+
+---
+
+Exemple de log console
+
+[INFO] Initialisation v2.87
+[CLUSTER] Connecté à dxfun.com:8000
+[DXCC] 340 entités chargées
+[SOLAR] Données NOAA OK
+
+
+---
+
+Structure du projet
+
+radio-spot-watcher/
+│
+├── src/
+│   ├── webapp.py
+│   ├── dxcc_latest.json
+│   ├── static/
+│   └── templates/
+│
+├── start.sh
+└── README.md
+
+
+---
+
+Journal des modifications — v2.87
+
+Date : 2025-10-31
+
+Ajout : mise à jour automatique du DXCC depuis GitHub
+
+Amélioration : interface, lisibilité et performance
+
+Correctif : rafraîchissement RSS et persistance des spots
+
+Préparation : palette de couleurs utilisateur
+
+
+
+---
 
 Sécurité
---------
-- L'application n'implémente pas d'authentification native. Restreindre l'accès via reverse proxy (Nginx), firewall ou VPN si nécessaire.
-- Valider l'usage public de l'endpoint export CSV si tu comptes exposer l'interface publiquement.
+
+Pas d’authentification intégrée.
+→ Utiliser un VPN ou proxy pour un accès distant.
+
+Aucune donnée personnelle stockée ou transmise.
+
+Les endpoints JSON sont réservés à un usage local.
+
+
+
+---
 
 Contribution
-------------
-- Pull requests bienvenues. Pour des changements majeurs (ex: réarchitecture, DB), ouvre d'abord une issue pour discussion.
-- Tests manuels : vérifier parsing des différentes variantes de lignes "DX", connexions aux flux RSS, changements de palette.
 
-Exemples utilitaires (curl)
----------------------------
-- Vérifier statut :
-  curl -s http://127.0.0.1:8000/status.json | jq
+Pull requests bienvenues.
 
-- Récupérer spots :
-  curl -s http://127.0.0.1:8000/spots.json | jq '.spots | length'
+Ouvrir une issue avant toute modification majeure.
 
-- Export CSV :
-  wget http://127.0.0.1:8000/export.csv
+Tests recommandés : parsing DX, RSS, DXCC, graphiques.
 
-licence /usage
----------------------------
-Projet hobby radio amateur pensé par F1SMV mis en oeuvre par chatgpt5, utilisation personnelle ok, toute redistribution publique doit citer l'auteur et ne pas supprimer les mentions de version.
 
-R
+
+---
+
+Commandes utiles
+
+curl -s http://127.0.0.1:8000/status.json | jq
+curl -s http://127.0.0.1:8000/spots.json | jq '.spots | length'
+wget http://127.0.0.1:8000/export.csv
+
+
+---
+
+Licence
+
+Projet radioamateur développé par F1SMV, assisté de ChatGPT-5.
+Libre pour usage personnel ou éducatif, redistribution autorisée avec mention de l’auteur et conservation du numéro de version.
+Sous licence MIT.
