@@ -1,292 +1,120 @@
-# Radio Spot Watcher — v2.87 (2025-10-31)
+---
 
-## Résumé
-**Radio Spot Watcher** est une application web légère qui permet de surveiller en temps réel les spots DX reçus sur un cluster telnet. 
-Elle affiche les spots sur une carte du monde, un tableau dynamique, des graphiques d’activité, des flux RSS et une watchlist. 
-Cette version 2.87 introduit la **mise à jour automatique de la base DXCC** (`dxcc_latest.json`), un **thème clair modernisé**, et des améliorations de performances.
+# 📡 Radio Spot Watcher v2.91 – Stable (2025-11-02)
+
+### 🛰️ Description
+**Radio Spot Watcher** est une application web Flask pour visualiser en temps réel les **spots DX** des clusters radioamateurs (ex: `dxfun.com`). 
+Interface moderne, responsive, et 100% compatible Raspberry Pi / Debian 12.
 
 ---
 
-## Fonctionnalités principales
-- Connexion automatique au **cluster DXFun.com (port 8000)** avec bascule automatique vers un cluster de secours (F5LEN). 
-- Tableau temps réel des spots (avec filtres bande/mode). 
-- Carte du monde interactive (Leaflet.js). 
-- Export CSV des spots reçus. 
-- Flux RSS intégrés (DX-World, ClubLog). 
-- Section “Most Wanted DXCC” mise à jour automatiquement. 
-- Graphiques d’activité par bande et heure (Matplotlib). 
-- Interface responsive et thème clair personnalisable. 
-- Watchlist avec ajout/suppression et surbrillance automatique. 
-- Synchronisation automatique du fichier DXCC. 
-- Persistance locale des données (`spots.json`, `rspot.log`).
+### ⚙️ Fonctionnalités principales
+- Connexion automatique à **dxfun.com:8000**
+- Affichage temps réel des **spots DX**
+- **DXCC local** depuis `cty.csv` → conversion automatique vers `dxcc_latest.json`
+- Interface claire (mode clair, couleurs personnalisables)
+- Carte interactive, horloges UTC/local, export CSV
+- Watchlist dynamique + gestion des “Most Wanted DXCC”
+- Journalisation (`rspot.log`) des préfixes inconnus
+- Aucune dépendance réseau externe (DXCC offline)
 
 ---
 
-## Prérequis
-- **Python 3.8+** 
-- **pip** 
-- Modules Python :
-  ```bash
-  pip install Flask requests feedparser matplotlib
-
-
----
-
-Installation
-
-1. Cloner ou copier le projet :
-
+### 🚀 Installation rapide
+```bash
 git clone https://github.com/Eric738/radio-spot-watcher.git
 cd radio-spot-watcher
-
-
-2. (Optionnel) Créer un environnement virtuel :
-
-python3 -m venv venv
-source venv/bin/activate
-
-
-3. Lancer :
-
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
 ./start.sh
 
-
-4. Ouvrir le navigateur :
-
-http://127.0.0.1:8000
-
-
+Serveur disponible sur :
+👉 http://127.0.0.1:8000
 
 
 ---
 
-Variables d’environnement
-
-Variable Description Valeur par défaut
-
-PORT Port HTTP 8000
-CLUSTER_HOST Hôte du cluster dxfun.com
-CLUSTER_PORT Port cluster 8000
-CLUSTER_FALLBACK_HOST Cluster de secours f5len.dxcluster.net
-CLUSTER_FALLBACK_PORT Port secours 8000
-CLUSTER_CALLSIGN Indicatif utilisateur F1SMV
-MAX_SPOTS Nombre de spots en mémoire 200
-MAX_MAP_SPOTS Spots visibles sur la carte 30
-RSS_UPDATE_INTERVAL Mise à jour RSS (sec) 300
-WANTED_UPDATE_INTERVAL Mise à jour Most Wanted (sec) 600
-DXCC_FILE Base DXCC locale dxcc_latest.json
-SPOTS_FILE Fichier spots spots.json
-LOG_FILE Journal d’activité rspot.log
-
-
-
----
-
-Endpoints HTTP
-
-/ → interface principale
-
-/spots.json → liste complète des spots
-
-/status.json → état (cluster, DXCC, version)
-
-/rss.json → flux RSS
-
-/wanted.json → liste “Most Wanted”
-
-/stats.json → statistiques
-
-/export.csv → export CSV
-
-/healthz → test de santé
-
-
-
----
-
-Fichiers générés
-
-Fichier Rôle
-
-spots.json Historique des spots
-dxcc_latest.json Base DXCC auto-mise à jour
-rspot.log Journal d’activité
-
-
-
----
-
-Personnalisation
-
-Thèmes disponibles : default, ocean, sunset, contrast.
-
-Watchlist enregistrée dans le navigateur.
-
-Filtres bande/mode mémorisés par session.
-
-Taille de carte et couleurs de spots sauvegardées.
-
-Palette de 10 couleurs sélectionnable dans l’interface.
-
-
-
----
-
-Mise à jour automatique DXCC
-
-Au démarrage :
-
-1. Charge le fichier local dxcc_latest.json.
-
-
-2. Vérifie s’il existe une version plus récente sur :
-https://raw.githubusercontent.com/Eric738/radio-spot-watcher/main/dxcc_latest.json
-
-
-3. Met à jour automatiquement si nécessaire.
-
-
-4. Journalise :
-
-[DXCC] Mise à jour réussie (340 entités)
-
-
-
-
----
-
-Exemple de service systemd
-
-Créer /etc/systemd/system/radiospot.service :
-
-[Unit]
-Description=Radio Spot Watcher
-After=network.target
-
-[Service]
-User=radio
-WorkingDirectory=/home/radio/radio-spot-watcher
-ExecStart=/usr/bin/python3 /home/radio/radio-spot-watcher/src/webapp.py
-Restart=on-failure
-Environment=PORT=8000
-
-[Install]
-WantedBy=multi-user.target
-
-Puis activer :
-
-sudo systemctl daemon-reload
-sudo systemctl enable radiospot
-sudo systemctl start radiospot
-
-
----
-
-Dépannage
-
-Aucun spot affiché
-Vérifier la connexion :
-
-ping dxfun.com
-telnet dxfun.com 8000
-
-DXCC manquant
-Créer un fichier vide :
-
-touch src/dxcc_latest.json
-
-Il sera mis à jour automatiquement.
-
-Port occupé
-Modifier dans start.sh :
-
-export PORT=8080
-
-RSS vide
-Attendre quelques minutes (limite de requêtes).
-
-
-
----
-
-Exemple de log console
-
-[INFO] Initialisation v2.87
-[CLUSTER] Connecté à dxfun.com:8000
-[DXCC] 340 entités chargées
-[SOLAR] Données NOAA OK
-
-
----
-
-Structure du projet
+📁 Arborescence
 
 radio-spot-watcher/
 │
+├── data/
+│   ├── spots_cache.json
+│   └── dxcc_latest.json
+│
 ├── src/
 │   ├── webapp.py
-│   ├── dxcc_latest.json
-│   ├── static/
-│   └── templates/
+│   ├── cty.csv
+│   └── static/
 │
+├── logs/rspot.log
 ├── start.sh
-└── README.md
+└── requirements.txt
 
 
 ---
 
-Journal des modifications — v2.87
+📘 Fichier DXCC local
 
-Date : 2025-10-31
+Le fichier src/cty.csv contient les préfixes DXCC :
 
-Ajout : mise à jour automatique du DXCC depuis GitHub
+Prefix,Country,Continent,Latitude,Longitude
+F,France,EU,48.0,2.4
+EA,Spain,EU,40.4,-3.7
+9J,Zambia,AF,-15.4,28.3
 
-Amélioration : interface, lisibilité et performance
-
-Correctif : rafraîchissement RSS et persistance des spots
-
-Préparation : palette de couleurs utilisateur
-
-
-
----
-
-Sécurité
-
-Pas d’authentification intégrée.
-→ Utiliser un VPN ou proxy pour un accès distant.
-
-Aucune donnée personnelle stockée ou transmise.
-
-Les endpoints JSON sont réservés à un usage local.
-
+🔄 Converti automatiquement en data/dxcc_latest.json au démarrage.
+Tu peux enrichir ou corriger le CSV à tout moment.
 
 
 ---
 
-Contribution
+🧩 Dépannage rapide
 
-Pull requests bienvenues.
+Problème Cause Solution
 
-Ouvrir une issue avant toute modification majeure.
-
-Tests recommandés : parsing DX, RSS, DXCC, graphiques.
+DXCC: Unknown Préfixe absent du CSV Ajouter le préfixe
+MAJ en ligne échouée Fichier GitHub désactivé Normal depuis 2.89
+Port 8000 occupé Processus déjà actif sudo fuser -k 8000/tcp
 
 
 
 ---
 
-Commandes utiles
+🧾 Versions
 
-curl -s http://127.0.0.1:8000/status.json | jq
-curl -s http://127.0.0.1:8000/spots.json | jq '.spots | length'
-wget http://127.0.0.1:8000/export.csv
+Version Date Points clés
+
+2.87 2025-10-31 Nouvelles couleurs
+2.89 2025-11-02 DXCC via cty.csv
+2.90 2025-11-02 Conversion CSV→JSON
+2.91 2025-11-02 288 entrées DXCC, version stable
+
 
 
 ---
 
-Licence
+🇬🇧 English Summary
 
-Projet radioamateur développé par F1SMV, assisté de ChatGPT-5.
-Libre pour usage personnel ou éducatif, redistribution autorisée avec mention de l’auteur et conservation du numéro de version.
-Sous licence MIT.
+Radio Spot Watcher v2.91 – A lightweight Flask-based DX Cluster monitor for radio amateurs.
+
+288 DXCC entries (local cty.csv)
+
+Automatic CSV → JSON conversion
+
+Offline DXCC resolution
+
+Clean web interface
+
+
+Run:
+
+./start.sh
+
+Visit: http://127.0.0.1:8000
+
+
+---
+
+📍 Author: pensé par F1SMV réalisé par chatgpt5
+📅 2025 – License: MIT

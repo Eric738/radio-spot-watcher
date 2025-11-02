@@ -1,0 +1,291 @@
+prefix,Entity,Continent,Latitude,Longitude
+F,France,46.0,2.0,EU
+TM,France,46.0,2.0,EU
+DL,Germany,51.0,9.0,EU
+DA,Germany,51.0,9.0,EU
+DB,Germany,51.0,9.0,EU
+DC,Germany,51.0,9.0,EU
+DD,Germany,51.0,9.0,EU
+DE,Germany,51.0,9.0,EU
+DF,Germany,51.0,9.0,EU
+DG,Germany,51.0,9.0,EU
+DH,Germany,51.0,9.0,EU
+DI,Germany,51.0,9.0,EU
+DJ,Germany,51.0,9.0,EU
+DK,Germany,51.0,9.0,EU
+DM,Germany,51.0,9.0,EU
+DN,Germany,51.0,9.0,EU
+DO,Germany,51.0,9.0,EU
+G,England,52.0,-1.0,EU
+M,England,52.0,-1.0,EU
+2E,England,52.0,-1.0,EU
+GW,Wales,52.5,-3.5,EU
+GM,Scotland,57.0,-4.0,EU
+GI,Northern Ireland,54.5,-6.5,EU
+I,Italy,42.0,12.0,EU
+EA,Spain,40.0,-4.0,EU
+EB,Spain,40.0,-4.0,EU
+EC,Spain,40.0,-4.0,EU
+ED,Spain,40.0,-4.0,EU
+EE,Spain,40.0,-4.0,EU
+EF,Spain,40.0,-4.0,EU
+EG,Spain,40.0,-4.0,EU
+EH,Spain,40.0,-4.0,EU
+EA8,Canary Islands,28.5,-16.0,AF
+EA9,Ceuta & Melilla,35.9,-5.3,AF
+PA,Netherlands,52.3,4.9,EU
+PB,Netherlands,52.3,4.9,EU
+PC,Netherlands,52.3,4.9,EU
+PD,Netherlands,52.3,4.9,EU
+PE,Netherlands,52.3,4.9,EU
+ON,Belgium,50.5,4.5,EU
+OO,Belgium,50.5,4.5,EU
+OP,Belgium,50.5,4.5,EU
+OQ,Belgium,50.5,4.5,EU
+OR,Belgium,50.5,4.5,EU
+OS,Belgium,50.5,4.5,EU
+OT,Belgium,50.5,4.5,EU
+OE,Austria,47.5,13.3,EU
+HB,Switzerland,46.8,8.2,EU
+HB0,Liechtenstein,47.1,9.5,EU
+SM,Sweden,62.0,15.0,EU
+SA,Sweden,62.0,15.0,EU
+SB,Sweden,62.0,15.0,EU
+SC,Sweden,62.0,15.0,EU
+SD,Sweden,62.0,15.0,EU
+LA,Norway,61.0,9.0,EU
+LB,Norway,61.0,9.0,EU
+LC,Norway,61.0,9.0,EU
+LD,Norway,61.0,9.0,EU
+LE,Norway,61.0,9.0,EU
+LF,Norway,61.0,9.0,EU
+LG,Norway,61.0,9.0,EU
+LH,Norway,61.0,9.0,EU
+LI,Norway,61.0,9.0,EU
+LJ,Norway,61.0,9.0,EU
+LN,Norway,61.0,9.0,EU
+OH,Finland,64.0,26.0,EU
+OF,Finland,64.0,26.0,EU
+OG,Finland,64.0,26.0,EU
+OI,Finland,64.0,26.0,EU
+OJ,Finland,64.0,26.0,EU
+OZ,Denmark,56.0,10.0,EU
+OU,Denmark,56.0,10.0,EU
+OV,Denmark,56.0,10.0,EU
+5P,Denmark,56.0,10.0,EU
+5Q,Denmark,56.0,10.0,EU
+OK,Czech Republic,49.8,15.5,EU
+OL,Czech Republic,49.8,15.5,EU
+SP,Poland,52.0,19.0,EU
+SN,Poland,52.0,19.0,EU
+SO,Poland,52.0,19.0,EU
+SQ,Poland,52.0,19.0,EU
+SR,Poland,52.0,19.0,EU
+HA,Hungary,47.2,19.5,EU
+HG,Hungary,47.2,19.5,EU
+YU,Serbia,44.0,21.0,EU
+YT,Serbia,44.0,21.0,EU
+YO,Romania,46.0,25.0,EU
+YP,Romania,46.0,25.0,EU
+YQ,Romania,46.0,25.0,EU
+YR,Romania,46.0,25.0,EU
+LZ,Bulgaria,43.0,25.0,EU
+SV,Greece,39.0,22.0,EU
+SW,Greece,39.0,22.0,EU
+SX,Greece,39.0,22.0,EU
+SY,Greece,39.0,22.0,EU
+SZ,Greece,39.0,22.0,EU
+CT,Portugal,39.5,-8.0,EU
+CQ,Portugal,39.5,-8.0,EU
+CR,Portugal,39.5,-8.0,EU
+CS,Portugal,39.5,-8.0,EU
+EI,Ireland,53.0,-8.0,EU
+UA,Russia,60.0,100.0,AS
+RA,Russia,60.0,100.0,AS
+RB,Russia,60.0,100.0,AS
+RC,Russia,60.0,100.0,AS
+RD,Russia,60.0,100.0,AS
+RE,Russia,60.0,100.0,AS
+RF,Russia,60.0,100.0,AS
+RG,Russia,60.0,100.0,AS
+RJ,Russia,60.0,100.0,AS
+RK,Russia,60.0,100.0,AS
+RL,Russia,60.0,100.0,AS
+RM,Russia,60.0,100.0,AS
+RN,Russia,60.0,100.0,AS
+RO,Russia,60.0,100.0,AS
+RQ,Russia,60.0,100.0,AS
+RT,Russia,60.0,100.0,AS
+RU,Russia,60.0,100.0,AS
+RV,Russia,60.0,100.0,AS
+RW,Russia,60.0,100.0,AS
+RX,Russia,60.0,100.0,AS
+RY,Russia,60.0,100.0,AS
+RZ,Russia,60.0,100.0,AS
+R,Russia,60.0,100.0,AS
+UR,Ukraine,49.0,32.0,EU
+UQ,Ukraine,49.0,32.0,EU
+US,Ukraine,49.0,32.0,EU
+UT,Ukraine,49.0,32.0,EU
+UU,Ukraine,49.0,32.0,EU
+UV,Ukraine,49.0,32.0,EU
+UW,Ukraine,49.0,32.0,EU
+UX,Ukraine,49.0,32.0,EU
+UY,Ukraine,49.0,32.0,EU
+UZ,Ukraine,49.0,32.0,EU
+EM,Ukraine,49.0,32.0,EU
+EN,Ukraine,49.0,32.0,EU
+EO,Ukraine,49.0,32.0,EU
+K,United States,39.0,-98.0,NA
+W,United States,39.0,-98.0,NA
+N,United States,39.0,-98.0,NA
+AA,United States,39.0,-98.0,NA
+AB,United States,39.0,-98.0,NA
+AC,United States,39.0,-98.0,NA
+AD,United States,39.0,-98.0,NA
+AE,United States,39.0,-98.0,NA
+AF,United States,39.0,-98.0,NA
+AG,United States,39.0,-98.0,NA
+AI,United States,39.0,-98.0,NA
+AJ,United States,39.0,-98.0,NA
+AK,United States,39.0,-98.0,NA
+KH6,Hawaii,21.3,-157.8,OC
+KL,Alaska,64.0,-152.0,NA
+VE,Canada,56.0,-106.0,NA
+VA,Canada,56.0,-106.0,NA
+VB,Canada,56.0,-106.0,NA
+VC,Canada,56.0,-106.0,NA
+VD,Canada,56.0,-106.0,NA
+VF,Canada,56.0,-106.0,NA
+VG,Canada,56.0,-106.0,NA
+VO,Canada,56.0,-106.0,NA
+XE,Mexico,23.0,-102.0,NA
+XF,Mexico,23.0,-102.0,NA
+PY,Brazil,-10.0,-55.0,SA
+PP,Brazil,-10.0,-55.0,SA
+PQ,Brazil,-10.0,-55.0,SA
+PR,Brazil,-10.0,-55.0,SA
+PS,Brazil,-10.0,-55.0,SA
+PT,Brazil,-10.0,-55.0,SA
+PU,Brazil,-10.0,-55.0,SA
+PV,Brazil,-10.0,-55.0,SA
+PW,Brazil,-10.0,-55.0,SA
+PX,Brazil,-10.0,-55.0,SA
+LU,Argentina,-34.0,-64.0,SA
+AY,Argentina,-34.0,-64.0,SA
+AZ,Argentina,-34.0,-64.0,SA
+L2,Argentina,-34.0,-64.0,SA
+L3,Argentina,-34.0,-64.0,SA
+L4,Argentina,-34.0,-64.0,SA
+L5,Argentina,-34.0,-64.0,SA
+L6,Argentina,-34.0,-64.0,SA
+L7,Argentina,-34.0,-64.0,SA
+L8,Argentina,-34.0,-64.0,SA
+L9,Argentina,-34.0,-64.0,SA
+CE,Chile,-30.0,-71.0,SA
+CA,Chile,-30.0,-71.0,SA
+CB,Chile,-30.0,-71.0,SA
+CC,Chile,-30.0,-71.0,SA
+CD,Chile,-30.0,-71.0,SA
+HK,Colombia,4.0,-72.0,SA
+5J,Colombia,4.0,-72.0,SA
+5K,Colombia,4.0,-72.0,SA
+YV,Venezuela,8.0,-66.0,SA
+4M,Venezuela,8.0,-66.0,SA
+YW,Venezuela,8.0,-66.0,SA
+YX,Venezuela,8.0,-66.0,SA
+YY,Venezuela,8.0,-66.0,SA
+CP,Bolivia,-17.0,-65.0,SA
+OA,Peru,-10.0,-76.0,SA
+HC,Ecuador,-2.0,-77.5,SA
+HD,Ecuador,-2.0,-77.5,SA
+JA,Japan,36.0,138.0,AS
+7J,Japan,36.0,138.0,AS
+7K,Japan,36.0,138.0,AS
+7L,Japan,36.0,138.0,AS
+7M,Japan,36.0,138.0,AS
+7N,Japan,36.0,138.0,AS
+8J,Japan,36.0,138.0,AS
+8N,Japan,36.0,138.0,AS
+HL,South Korea,37.0,127.5,AS
+DS,South Korea,37.0,127.5,AS
+DT,South Korea,37.0,127.5,AS
+6K,South Korea,37.0,127.5,AS
+6L,South Korea,37.0,127.5,AS
+BY,China,35.0,105.0,AS
+BA,China,35.0,105.0,AS
+BD,China,35.0,105.0,AS
+BG,China,35.0,105.0,AS
+BH,China,35.0,105.0,AS
+BI,China,35.0,105.0,AS
+BJ,China,35.0,105.0,AS
+BZ,China,35.0,105.0,AS
+VU,India,20.0,77.0,AS
+AT,India,20.0,77.0,AS
+AU,India,20.0,77.0,AS
+AW,India,20.0,77.0,AS
+8T,India,20.0,77.0,AS
+8U,India,20.0,77.0,AS
+8W,India,20.0,77.0,AS
+8X,India,20.0,77.0,AS
+8Y,India,20.0,77.0,AS
+HS,Thailand,15.0,100.0,AS
+E2,Thailand,15.0,100.0,AS
+YB,Indonesia,-5.0,120.0,OC
+YC,Indonesia,-5.0,120.0,OC
+YD,Indonesia,-5.0,120.0,OC
+YE,Indonesia,-5.0,120.0,OC
+YF,Indonesia,-5.0,120.0,OC
+YG,Indonesia,-5.0,120.0,OC
+YH,Indonesia,-5.0,120.0,OC
+7A,Indonesia,-5.0,120.0,OC
+7B,Indonesia,-5.0,120.0,OC
+7C,Indonesia,-5.0,120.0,OC
+7D,Indonesia,-5.0,120.0,OC
+7E,Indonesia,-5.0,120.0,OC
+7F,Indonesia,-5.0,120.0,OC
+7G,Indonesia,-5.0,120.0,OC
+7H,Indonesia,-5.0,120.0,OC
+7I,Indonesia,-5.0,120.0,OC
+8A,Indonesia,-5.0,120.0,OC
+8B,Indonesia,-5.0,120.0,OC
+8C,Indonesia,-5.0,120.0,OC
+8D,Indonesia,-5.0,120.0,OC
+8E,Indonesia,-5.0,120.0,OC
+8F,Indonesia,-5.0,120.0,OC
+8G,Indonesia,-5.0,120.0,OC
+8H,Indonesia,-5.0,120.0,OC
+8I,Indonesia,-5.0,120.0,OC
+PK,Indonesia,-5.0,120.0,OC
+PL,Indonesia,-5.0,120.0,OC
+PM,Indonesia,-5.0,120.0,OC
+PN,Indonesia,-5.0,120.0,OC
+PO,Indonesia,-5.0,120.0,OC
+9M,Malaysia,2.5,112.5,AS
+9W,Malaysia,2.5,112.5,AS
+VK,Australia,-25.0,135.0,OC
+VH,Australia,-25.0,135.0,OC
+VI,Australia,-25.0,135.0,OC
+VJ,Australia,-25.0,135.0,OC
+VL,Australia,-25.0,135.0,OC
+VM,Australia,-25.0,135.0,OC
+VN,Australia,-25.0,135.0,OC
+ZL,New Zealand,-41.0,174.0,OC
+ZM,New Zealand,-41.0,174.0,OC
+CN,Morocco,32.0,-5.0,AF
+5C,Morocco,32.0,-5.0,AF
+5H,Tanzania,-6.0,35.0,AF
+5I,Tanzania,-6.0,35.0,AF
+ZS,South Africa,-29.0,24.0,AF
+3DA,Swaziland,-26.5,31.5,AF
+3Y0,Bouvet Island,-54.4,3.4,AN
+VP8,Falkland Islands,-51.7,-59.0,SA
+VP8/S,South Sandwich Islands,-57.0,-26.0,AN
+VP8/O,South Orkney Islands,-60.6,-45.5,AN
+FT5,Amsterdam & St Paul,-37.8,77.5,AF
+KH1,Baker Island,0.2,-176.5,OC
+HL9,North Korea,40.0,127.0,AS
+FO0,Clipperton Island,10.3,-109.2,NA
+VK0,Heard Island,-53.1,73.5,AN
+VK0M,Macquarie Island,-54.5,158.9,OC
+ZS8,Prince Edward & Marion Islands,-46.9,37.8,AF

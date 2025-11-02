@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Radio Spot Watcher v2.87 (2025-10-31) — Thème clair
-Nouveautés v2.87 :
-  - DXCC auto : création dxcc.json local + tentative de mise à jour en ligne à chaque démarrage
+Radio Spot Watcher v2.91 (2025-10-31) — Thème clair
+Nouveautés v2.91 :
+  - DXCC auto : création dxcc_latest.json local + tentative de mise à jour en ligne à chaque démarrage
   - Matching DXCC robuste (préfixe le plus long, nettoyage suffixes /P /M /MM /QRP /DX /AM /MAR)
   - Logs explicites : [DXCC] ... entrées chargées / mises à jour
 Conserve 2.86 : carte, watchlist, filtres bande/mode, charts canvas, RSS, export CSV, palettes.
@@ -21,7 +21,7 @@ from flask import Flask, jsonify, Response, render_template_string
 # =========================
 # Config
 # =========================
-VERSION = "v2.87 (2025-10-31)"
+VERSION = "v2.91 (2025-10-31)"
 HTTP_PORT = int(os.environ.get("PORT", 8000))
 
 # Cluster (primaire + fallback)
@@ -38,8 +38,8 @@ LOG_FILE   = os.environ.get("LOG_FILE",   "rspot.log")
 
 # DXCC : URL (modifiable)
 DXCC_REMOTE_URL = os.environ.get(
-    "DXCC_REMOTE_URL",
-    "https://raw.githubusercontent.com/Eric738/radio-spot-watcher/main/dxcc_latest.json"
+    #"DXCC_REMOTE_URL",
+    ""
 )
 
 # RSS
@@ -945,8 +945,87 @@ function initClocks(){
 '''
 
 # =========================
+# ============================================
+
+# Nouvelle gestion DXCC via cty.csv (v2.91)
+
+# ============================================
+
+import csv, json, os
+
+from pathlib import Path
+
+
+
+
+def load_dxcc():
+    import csv
+    dxcc = {}
+    csv_file = "/home/eric/radio-spot-watcher/src/cty.csv"
+    print(f"[DXCC] Lecture du fichier CSV : {csv_file}")
+    try:
+        with open(csv_file, newline='') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                prefix = row.get("Prefix", "").strip()
+                if not prefix or prefix in dxcc:
+                    continue
+                try:
+                    dxcc[prefix] = {
+                        "country": row.get("Entity", "Unknown").strip(),
+                        "continent": row.get("Continent", "??").strip(),
+                        "lat": float(row.get("Latitude", 0.0)),
+                        "lon": float(row.get("Longitude", 0.0))
+                    }
+                except Exception as e:
+                    print(f"[DXCC] Ligne ignorée : {prefix} ({e})")
+        print(f"[DXCC] Fichier local chargé ({len(dxcc)} entrées)")
+    except Exception as e:
+        print(f"[DXCC] Erreur lors du chargement CSV : {e}")
+        dxcc = {}
+    return dxcc
+
+
+
+
+# Chargement au démarrage
+
+DXCC_DATA = load_dxcc()
+
+
 # Entrée principale
 # =========================
+
+# --- Détection améliorée du pays à partir du préfixe ---
+def detect_country(call, dxcc):
+    """
+    Retourne le pays correspondant à un indicatif d'après dxcc_latest.json.
+    Recherche le préfixe le plus long correspondant (F5, F, etc.)
+    """
+    if not call or not dxcc:
+        return "Unknown"
+
+    call = call.upper().strip()
+    best_match = None
+
+    # Trie les préfixes du plus long au plus court pour trouver le plus précis
+    for prefix in sorted(dxcc.keys(), key=len, reverse=True):
+        if call.startswith(prefix):
+            best_match = prefix
+            break
+
+    if best_match:
+        return dxcc[best_match]["country"]
+    else:
+        # journalise les appels non trouvés
+        try:
+            with open("rspot.log", "a") as logf:
+                logf.write(f"[WARN] Unknown prefix: {call}\\")
+        except:
+            pass
+        return "Unknown"
+
+
 if __name__ == "__main__":
     app = RadioSpotWatcher()
     app.run() 
