@@ -245,7 +245,7 @@ UA,European Russia,EU,56.0,38.0
 UA9,Asiatic Russia,AS,55.0,83.0
 UA0,Far East Russia,AS,56.0,160.0
 RA,Russia,EU,60.0,100.0
-RB,Russia,6,EU,0.0,100.0
+RB,Russia,EU,60.0,100.0
 RC,Russia,EU,60.0,100.0
 RD,Russia,EU,60.0,100.0
 RE,Russia,EU,60.0,100.0
