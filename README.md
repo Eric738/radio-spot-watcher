@@ -1,5 +1,3 @@
----
-
 # 📡 Radio Spot Watcher v2.91 – Stable (2025-11-02)
 
 ### 🛰️ Description
